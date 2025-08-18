@@ -1,0 +1,655 @@
+/* Enhanced Drawer System with Portal Support and Accessibility */
+:root {
+  --drawer-w: 440px;
+}
+
+/* === Portal-based Drawer System === */
+
+/* Portal container - positioned above everything */
+.adsm-drawer-portal { 
+  position: fixed; 
+  inset: 0; 
+  z-index: 9999; 
+}
+
+/* Backdrop with click-to-close */
+.adsm-drawer-backdrop { 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(2, 6, 23, 0.6); 
+  display: flex; 
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+/* Main drawer container */
+.adsm-drawer { 
+  width: min(640px, 100vw); 
+  height: 100vh; 
+  background: var(--color-panel); 
+  color: var(--color-text); 
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4); 
+  display: grid; 
+  grid-template-rows: auto 1fr auto; 
+  overflow: hidden; /* Prevent any overflow at container level */
+}
+
+/* Sticky header - always visible */
+.adsm-drawer-head { 
+  position: sticky; 
+  top: 0; 
+  z-index: 2; 
+  display: grid; 
+  grid-template-columns: 1fr auto auto; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 16px; 
+  background: inherit; 
+  border-bottom: 1px solid var(--color-border); 
+}
+
+/* Title section */
+.adsm-drawer-title-section {
+  min-width: 0; /* Allow text truncation */
+}
+
+.adsm-drawer-title { 
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700; 
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tab navigation */
+.adsm-drawer-tabs { 
+  display: flex; 
+  gap: 4px; 
+  padding: 0 8px;
+  overflow-x: auto; /* Allow horizontal scroll only for tabs */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.adsm-drawer-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.adsm-drawer-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.adsm-drawer-tab:hover {
+  background: var(--color-muted);
+  color: var(--color-text);
+}
+
+.adsm-drawer-tab[data-active="true"] {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font-weight: 600;
+}
+
+.adsm-drawer-tab:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Close button */
+.adsm-drawer-close { 
+  appearance: none; 
+  border: 1px solid var(--color-border); 
+  background: transparent; 
+  color: inherit; 
+  border-radius: 8px; 
+  padding: 8px 10px; 
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.adsm-drawer-close:hover {
+  background: var(--color-muted);
+}
+
+.adsm-drawer-close:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollable body - no horizontal scroll */
+.adsm-drawer-body { 
+  overflow-y: auto; 
+  overflow-x: hidden; 
+  padding: 16px; 
+  overscroll-behavior: contain;
+  /* Smooth momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optional footer */
+.adsm-drawer-foot { 
+  border-top: 1px solid var(--color-border); 
+  padding: 12px 16px;
+  background: inherit;
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  text-align: center;
+}
+
+/* === Component Grid Enhancements === */
+
+/* Component card containers */
+.components-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.component-card {
+  position: relative;
+}
+
+.component-card-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  appearance: none;
+}
+
+.component-card-button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Thumbnail container */
+.component-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+}
+
+/* === Legacy Support for Existing Drawers === */
+
+/* Component drawer container from ComponentsCatalog */
+.cmp-drawer {
+  position: fixed;
+  inset: var(--app-topbar-h) 0 0 auto; /* top, right, bottom, left */
+  width: clamp(320px, 28vw, 440px);
+  z-index: var(--z-drawer);
+  background: var(--color-panel);
+  border-left: 1px solid var(--color-border);
+  height: calc(100dvh - var(--app-topbar-h));
+  overflow-x: hidden; /* prevent horizontal scroll at container level */
+}
+
+/* Legacy drawer styles */
+.adsm-drawer-legacy {
+  position: fixed;
+  inset: 0 0 0 auto;           /* right side */
+  width: var(--drawer-w);
+  background: var(--color-panel);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* prevent sideways scroll */
+  z-index: 30;                 /* above page content */
+}
+
+/* Component drawer from ComponentDrawer.tsx */
+.comp-drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-panel);
+}
+
+.adsm-drawer__header {
+  position: sticky;            /* stays visible while content scrolls */
+  top: 0;
+  z-index: 1;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adsm-drawer__tabs { 
+  display: flex; 
+  gap: 8px; 
+  overflow-x: auto; 
+}
+
+.adsm-drawer__tabs button {
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.adsm-drawer__tabs button:hover {
+  background: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
+.adsm-drawer__tabs button.is-active {
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  border-color: var(--color-border);
+}
+
+.adsm-drawer__body {
+  flex: 1;                     /* take remaining height */
+  min-height: 0;               /* allow children to scroll */
+  overflow-y: auto;            /* only body scrolls vertically */
+  padding: 16px;
+}
+
+.adsm-drawer__section { 
+  margin-bottom: 16px; 
+}
+
+.adsm-drawer__section:last-child {
+  margin-bottom: 0;
+}
+
+/* Preview panel */
+.adsm-preview {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  min-height: 120px;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  padding: 12px;
+  background: color-mix(in oklch, var(--color-bg), var(--color-panel) 40%);
+}
+
+/* Keep JSON/code from causing sideways scroll on the whole drawer */
+.adsm-code {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  max-height: 40vh;
+  overflow: auto;              /* scroll only within the code block */
+  background: transparent;
+  white-space: pre;            /* preserve formatting */
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Simple chip */
+.adsm-chip { 
+  display: inline-block; 
+  padding: 2px 6px; 
+  border-radius: 999px; 
+  background: rgba(255,255,255,.06); 
+  border: 1px solid var(--color-border); 
+  font-size: 12px; 
+  color: var(--color-text);
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* Close button */
+.adsm-drawer__header button[aria-label="Close"] {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.adsm-drawer__header button[aria-label="Close"]:hover {
+  background: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  color: var(--color-text);
+}
+
+/* Footer buttons */
+.adsm-drawer__footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: 8px;
+}
+
+.adsm-drawer__footer button {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.adsm-drawer__footer button:hover {
+  background: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
+/* Demo button for preview */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.btn--primary:hover {
+  background: color-mix(in oklab, var(--color-primary) 90%, black);
+}
+
+/* === Accessibility and UX Enhancements === */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus indicators */
+.adsm-drawer-tab:focus-visible,
+.adsm-drawer-close:focus-visible,
+.component-card-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* === Responsive Design === */
+@media (max-width: 768px) {
+  .adsm-drawer {
+    width: 100vw;
+  }
+  
+  .adsm-drawer-head {
+    padding: 12px 16px;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  
+  .adsm-drawer-title {
+    font-size: 16px;
+    grid-column: 1 / -1;
+  }
+  
+  .adsm-drawer-tabs {
+    grid-column: 1 / -1;
+    gap: 2px;
+    padding: 8px 0 0;
+  }
+  
+  .adsm-drawer-tab {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .adsm-drawer-close {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  
+  .components-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --drawer-w: 100vw;
+  }
+  
+  .adsm-drawer-legacy {
+    left: 0;
+    right: 0;
+    width: 100vw;
+  }
+  
+  .components-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === High Contrast and Accessibility === */
+@media (prefers-contrast: high) {
+  .adsm-drawer {
+    border: 2px solid var(--color-border);
+  }
+  
+  .adsm-drawer-tab[data-active="true"] {
+    border: 2px solid var(--color-primary);
+  }
+  
+  .component-card-button:focus {
+    outline: 3px solid var(--color-primary);
+  }
+}
+
+/* === Reduced Motion Support === */
+@media (prefers-reduced-motion: reduce) {
+  .adsm-drawer-tab,
+  .adsm-drawer-close,
+  .component-card-button,
+  .btn {
+    transition: none;
+  }
+  
+  .adsm-drawer-backdrop {
+    background: rgba(0, 0, 0, 0.8); /* More opaque without transitions */
+  }
+}
+
+/* === Print Styles === */
+@media print {
+  .adsm-drawer-portal,
+  .adsm-drawer-backdrop,
+  .adsm-drawer {
+    display: none;
+  }
+}
+
+/* === Component Drawer Input Styling Fix === */
+/* Scope to the drawer containers so the rest of the app is untouched */
+.component-drawer, .drawer, [data-ctx="component-drawer"], 
+.cmp-drawer, .adsm-drawer, .comp-drawer, .adsm-drawer-body {
+  /* Input form elements */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="number"],
+  input[type="url"],
+  input[type="password"],
+  select,
+  textarea {
+    background: var(--adsm-input-bg);
+    color: var(--adsm-input-fg);
+    border: 1px solid var(--adsm-input-bd);
+    border-radius: 10px;
+    padding: 10px 12px;
+    line-height: 1.25;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  /* Placeholder styling */
+  input::placeholder,
+  textarea::placeholder { 
+    color: var(--adsm-input-ph); 
+    opacity: 1; 
+  }
+
+  /* Focus states */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--adsm-input-bd-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--adsm-input-bd-focus) 30%, transparent);
+  }
+
+  /* Disabled states */
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background: var(--adsm-input-disabled-bg);
+    color: var(--adsm-input-disabled-fg);
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+
+  /* Checkbox and radio buttons */
+  input[type="checkbox"],
+  input[type="radio"] { 
+    accent-color: var(--adsm-input-bd-focus);
+    width: auto; /* Reset width for checkboxes */
+  }
+
+  /* Labels */
+  label {
+    color: var(--adsm-input-fg);
+    font-weight: 500;
+  }
+
+  /* Field groups */
+  .prop-field,
+  .field-group {
+    margin-bottom: 12px;
+  }
+
+  .prop-field label,
+  .field-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: var(--adsm-input-fg);
+  }
+
+  /* Select dropdowns need special treatment */
+  select {
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 32px;
+    appearance: none;
+  }
+}
+
+/* Alternative class-based approach for explicit styling */
+.drawer-input { 
+  all: unset; 
+  background: var(--adsm-input-bg);
+  color: var(--adsm-input-fg);
+  border: 1px solid var(--adsm-input-bd);
+  border-radius: 10px; 
+  padding: 10px 12px; 
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.25;
+  box-sizing: border-box;
+}
+
+.drawer-input:focus { 
+  border-color: var(--adsm-input-bd-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--adsm-input-bd-focus) 30%, transparent);
+}
+
+.drawer-input::placeholder {
+  color: var(--adsm-input-ph);
+  opacity: 1;
+}
+
+.drawer-input:disabled {
+  background: var(--adsm-input-disabled-bg);
+  color: var(--adsm-input-disabled-fg);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* === PropsEditor-specific dark theme inputs + selects === */
+:root {
+  --adsm-input-bg: #0f162e;       /* deep panel */
+  --adsm-input-fg: #e2e8f0;       /* slate-100 */
+  --adsm-input-border: #334155;   /* slate-700 */
+  --adsm-input-focus: #3b82f6;    /* blue-500 */
+}
+
+/* Layout for labels/controls */
+.adsm-props { display: grid; gap: 10px; }
+.adsm-row { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: center; }
+.adsm-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.adsm-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--adsm-input-border); background: #0b1020; color: var(--adsm-input-fg); }
+
+/* Inputs */
+.adsm-input,
+.adsm-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--adsm-input-border);
+  background: var(--adsm-input-bg);
+  color: var(--adsm-input-fg);
+}
+
+.adsm-input:focus,
+.adsm-select:focus { outline: none; border-color: var(--adsm-input-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--adsm-input-focus) 30%, transparent); }
+
+/* Keep selects simple and portable */
+.adsm-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: none; background-repeat: no-repeat; background-position: right 8px center; }
+
+/* Checkbox stays native for accessibility; align with text color */
+.adsm-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--adsm-input-focus); }

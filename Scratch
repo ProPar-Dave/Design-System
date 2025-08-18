@@ -1,0 +1,14 @@
+curl -sS -X POST 'https://bjpcjlemlfnmrqseldmb.functions.supabase.co/functions/v1/ping' \
+  -H 'content-type: application/json' \
+  -H 'x-ping-token: dude' \
+  --data '{
+    "id": "latest",
+    "event": "build:complete",
+    "message": "Production build published",
+    "url": "https://daily-stem-67845579.figma.site/",
+    "version": "v1.0.0",
+    "meta": {"commit": "abc123"}
+  }'
+
+git config --global user.name "Dave"
+git config --global user.email "david.bullard@procurementpartners.com"

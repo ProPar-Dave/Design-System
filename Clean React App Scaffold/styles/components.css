@@ -1,0 +1,348 @@
+/* === Components Drawer === */
+.comp-drawer {
+  position: sticky; 
+  top: var(--app-topbar-h, 64px); /* clears site header */
+  height: calc(100vh - var(--app-topbar-h, 64px)); 
+  display: flex; 
+  flex-direction: column;
+}
+
+.comp-drawer__hdr {
+  position: sticky; 
+  top: 0; 
+  z-index: 1; 
+  padding: 12px 16px; 
+  background: var(--color-panel); 
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comp-drawer__title {
+  margin: 0; 
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.comp-drawer__tabs {
+  display: flex; 
+  gap: 8px; 
+  padding: 8px 12px; 
+  border-bottom: 1px solid var(--color-border); 
+  overflow: hidden;
+  background: var(--color-panel);
+}
+
+.comp-drawer__body {
+  flex: 1; 
+  overflow: auto; 
+  padding: 12px 12px 16px;
+  overscroll-behavior: contain;
+}
+
+/* Kill horizontal scroll from children */
+.comp-drawer__body > * {
+  min-width: 0;
+}
+
+.comp-drawer__body pre, 
+.comp-drawer__body code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.drawer__close { 
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer__close:hover {
+  background: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  color: var(--color-text);
+}
+
+.drawer__tabs { 
+  display: flex; 
+  gap: 8px; 
+}
+
+.comp-drawer__tabs button[role="tab"] {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.comp-drawer__tabs button[role="tab"]:hover {
+  background: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
+.comp-drawer__tabs button[role="tab"][aria-selected="true"] {
+  border-color: var(--color-border);
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  color: var(--color-text);
+}
+
+.drawer__body { 
+  overflow: auto; 
+  overscroll-behavior: contain; 
+  padding: 12px; 
+}
+
+/* Preview canvas styles */
+.preview-canvas { 
+  background: color-mix(in oklab, var(--color-panel) 94%, var(--color-bg)); 
+  border: 1px dashed var(--color-border); 
+  border-radius: var(--radius-md); 
+  padding: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  min-height: 140px; 
+}
+
+/* === Preview Components === */
+.comp-preview {
+  border: 1px dashed var(--color-border); 
+  border-radius: 12px; 
+  padding: 16px; 
+  display: grid; 
+  place-items: center; 
+  min-height: 160px;
+  background: var(--color-bg);
+}
+
+.btn {
+  padding: 8px 12px; 
+  border-radius: 8px; 
+  border: 1px solid transparent;
+  font: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn--primary {
+  background: var(--button-bg, var(--color-accent)); 
+  color: var(--button-fg, var(--color-text));
+  border-color: var(--color-border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hint {
+  opacity: 0.6; 
+  font-size: 12px; 
+  margin-top: 8px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  color: var(--color-text);
+}
+
+/* === Code display === */
+.code {
+  max-width: 100%;
+  overflow: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  color: var(--color-text);
+}
+
+.empty {
+  color: var(--color-muted);
+  padding: 12px 0;
+  text-align: center;
+  font-style: italic;
+}
+
+.chips { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px; 
+}
+
+/* === AA Compliant Chips === */
+.chip {
+  font-size: 12px; 
+  line-height: 1; 
+  padding: 6px 8px; 
+  border-radius: 999px; 
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.chip--solid {
+  background: color-mix(in oklab, var(--color-text) 10%, transparent); 
+  color: var(--color-text); 
+  border: 1px solid color-mix(in oklab, var(--color-text) 20%, transparent);
+}
+
+.chip--outline {
+  background: transparent; 
+  color: var(--color-text); 
+  border: 1px solid color-mix(in oklab, var(--color-text) 35%, transparent);
+}
+
+.code { 
+  max-width: 100%; 
+  overflow: auto; 
+  background: #00000020; 
+  padding: 12px; 
+  border-radius: 12px; 
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty { 
+  color: var(--color-muted); 
+  padding: 12px 0; 
+  text-align: center;
+  font-style: italic;
+}
+
+.drawer__foot { 
+  display: flex; 
+  gap: 8px; 
+  padding: 12px; 
+  border-top: 1px solid var(--color-border); 
+}
+
+.btn { 
+  padding: 8px 12px; 
+  border-radius: 10px; 
+  border: 1px solid var(--color-border); 
+  background: transparent; 
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
+.btn-primary { 
+  background: var(--color-accent); 
+  color: var(--color-text); 
+  border-color: transparent; 
+}
+
+/* prevent side-scrolling caused by wide children */
+.drawer [data-scroll] { 
+  overflow-x: hidden; 
+}
+
+/* Additional content styles */
+.prose {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.props-list {
+  display: grid;
+  gap: 12px;
+}
+
+.prop-item {
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.prop-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.prop-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: rgba(255,255,255,.06);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.prop-description {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.chip.required {
+  background: #F59E0B;
+  color: white;
+  border-color: #F59E0B;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .drawer {
+    width: 100vw;
+    left: 0;
+    right: 0;
+  }
+}

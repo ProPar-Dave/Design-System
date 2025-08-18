@@ -1,0 +1,149 @@
+/* Preview component styles */
+.adsm-preview-empty { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  height: 160px; 
+  border: 1px dashed var(--color-border); 
+  border-radius: var(--radius-md); 
+  color: var(--color-muted-foreground); 
+}
+
+.adsm-preview-wrap { 
+  padding: 16px; 
+  background: var(--color-background); 
+  border: 1px solid var(--color-border); 
+  border-radius: var(--radius-md); 
+}
+
+.adsm-preview-stage { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  min-height: 80px; 
+}
+
+.adsm-preview-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  color: var(--color-muted-foreground);
+  background: var(--color-muted);
+  font-size: 14px;
+}
+
+.adsm-preview__container {
+  padding: 16px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+/* Props editor styles */
+.adsm-props-form { 
+  display: grid; 
+  gap: 10px; 
+}
+
+.adsm-props-form .row { 
+  display: grid; 
+  grid-template-columns: 140px 1fr; 
+  gap: 8px; 
+  align-items: center; 
+}
+
+.adsm-props-form input, 
+.adsm-props-form select { 
+  padding: 6px 8px; 
+  border-radius: var(--radius-md); 
+  border: 1px solid var(--color-border); 
+  background: var(--color-input-background); 
+  color: var(--color-text); 
+}
+
+.adsm-props-form input:focus,
+.adsm-props-form select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.adsm-props-form .actions { 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 8px; 
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 8px;
+}
+
+/* Button enhancements */
+.adsm-btn { 
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .25); 
+}
+
+/* Improved hover and focus states */
+.adsm-props-form button:hover {
+  background: var(--color-muted);
+}
+
+.adsm-props-form button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+/* Accessibility improvements */
+.adsm-props-form input[type="checkbox"] {
+  accent-color: var(--color-primary);
+}
+
+/* Loading and empty states */
+.adsm-preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: var(--color-muted-foreground);
+  font-size: 14px;
+}
+
+.adsm-preview-loading::before {
+  content: "⏳";
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Error boundary styles */
+.adsm-preview-error {
+  padding: 16px;
+  border: 2px solid var(--color-destructive);
+  border-radius: var(--radius-md);
+  background: var(--color-destructive);
+  color: var(--color-destructive-foreground);
+  text-align: center;
+  font-size: 14px;
+}
+
+.adsm-preview-error-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.adsm-preview-error-message {
+  font-size: 12px;
+  opacity: 0.8;
+}

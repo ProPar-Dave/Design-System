@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Atomic DS Manager</title>
+    <script>
+    (function(){
+      var KEY='adsm:theme';
+      var t = localStorage.getItem(KEY);
+      if(t!=='light' && t!=='dark') t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      // Prepaint to avoid white flash before JS injects tokens
+      var pre = document.createElement('style');
+      pre.id = 'adsm-prepaint';
+      pre.textContent = t==='dark' ? 'body{background:#0B1020;color:#E6ECFF}' : 'body{background:#FFFFFF;color:#0F172A}';
+      document.head.appendChild(pre);
+    })();
+    </script>
+    <style>
+      html, body, #root { min-height: 100%; }
+      /* Use token fallbacks so first paint is themed even before injection */
+      body{ background: var(--color-bg, #0B1020); color: var(--color-text, #E6ECFF); margin: 0; font-family: var(--font-sans, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif); }
+      /* Ensure main surfaces inherit the themed background (fixes white below fold) */
+      main, .app, .app-shell, .page, .content, .panel { background: inherit; }
+      *:focus-visible{ outline: 2px solid var(--color-accent, #3B82F6); outline-offset: 2px; border-radius: 6px; }
+      #safe-boot{position:fixed;inset:0;padding:16px;background:#0B1020;color:#E6ECFF;font:14px/1.5 var(--font-sans, ui-sans-serif, system-ui, sans-serif)}
+    </style>
+  </head>
+  <body>
+    <script id="adsm-guidelines" type="text/plain">
+# Atomic DS — Starter Guidelines
+
+This inline fallback guarantees the Guidelines page renders even if the host rewrites `guidelines.md` requests.
+
+## Tokens
+- Colors, typography, spacing, radii
+
+## Components
+- Atoms → Molecules → Organisms
+
+## Versioning
+- Semantic versioning; document breaking changes
+</script>
+    <div id="root"></div>
+    <div id="safe-boot"><strong>Atomic DS Manager</strong><br/>Booting… If this remains, startup failed.</div>
+    <script type="module" src="./boot.tsx?v=1737051724"></script>
+    <noscript><div style="position:fixed;inset:0;padding:16px;background:#111;color:#fff">This site requires JavaScript. Open <a href="./guidelines.md" style="color:#3B82F6">guidelines.md</a>.</div></noscript>
+  </body>
+</html>
