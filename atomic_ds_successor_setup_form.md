@@ -1,5 +1,7 @@
 # Atomic DS – Successor Setup Form
 
+Use this form to collect the key details required to set up a successor implementation of Atomic DS. Fill out each section with the relevant repository, authentication, and component information. If a field does not apply, leave it blank or mark it as "N/A".
+
 ## 1. Repository Destination
 - Provider: (GitHub / GitLab / other)  
 - Owner/Org:  
