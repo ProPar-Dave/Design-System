@@ -12,9 +12,12 @@ Use this form to collect the key details required to set up a successor implemen
 ---
 
 ## 2. Authentication
-- Preferred method: (Option A – PAT in Make / Option B – Edge Function proxy)
-- If Option A: Provide PAT scope (e.g., `repo` (with `contents:write`)).
-- If Option B: Provide endpoint URL + auth expectations.
+- Preferred method: (Option A — PAT in Make / Option B — Edge Function proxy)
+- If Option A: Provide PAT scope (`repo` with `contents:write`).
+- If Option B: Provide endpoint URL and auth expectations.
+- Required endpoint parameters: `owner`, `repo`, `branch`, `distPath`.
+- Accepted authentication schemes: `Authorization: Bearer <token>` or `x-api-key: <key>`.
+- Example entry: `https://example.com/upload?owner=acme&repo=design-system&branch=main&distPath=/dist` with header `Authorization: Bearer <token>` (or `x-api-key: <key>`).
 
 ---
 
