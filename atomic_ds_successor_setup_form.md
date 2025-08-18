@@ -18,9 +18,9 @@
 
 ## 3. Component Priorities
 - **Atoms (first)**:  
-- **Molecules (next)**:  
-- **Organisms (later)**:  
-- Must-mirror Figma components:  
+- **Molecules (next)**:
+- **Organisms (later)**:
+- Must-mirror Figma components: (e.g., `Core/Button – https://www.figma.com/file/xyz#component=123` — use `Library/ComponentName` naming and include direct component links)
 
 ---
 
