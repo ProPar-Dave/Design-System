@@ -10,9 +10,9 @@
 ---
 
 ## 2. Authentication
-- Preferred method: (Option A – PAT in Make / Option B – Edge Function proxy)  
-- If Option A: Provide PAT scope (repo-only, `contents:write`).  
-- If Option B: Provide endpoint URL + auth expectations.  
+- Preferred method: (Option A – PAT in Make / Option B – Edge Function proxy)
+- If Option A: Provide PAT scope (e.g., `repo` (with `contents:write`)).
+- If Option B: Provide endpoint URL + auth expectations.
 
 ---
 
