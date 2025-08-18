@@ -10,9 +10,12 @@
 ---
 
 ## 2. Authentication
-- Preferred method: (Option A – PAT in Make / Option B – Edge Function proxy)  
-- If Option A: Provide PAT scope (repo-only, `contents:write`).  
-- If Option B: Provide endpoint URL + auth expectations.  
+- Preferred method: (Option A – PAT in Make / Option B – Edge Function proxy)
+- If Option A: Provide PAT scope (repo-only, `contents:write`).
+- If Option B: Provide endpoint URL + auth expectations.
+  - Required endpoint parameters: `owner`, `repo`, `branch`, `distPath`.
+  - Accepted authentication schemes: `Authorization: Bearer <token>` or `x-api-key: <key>`.
+  - Example entry: `https://edge.example.com/upload?owner=acme&repo=ds&branch=main&distPath=/dist` with header `Authorization: Bearer abc123`.
 
 ---
 
