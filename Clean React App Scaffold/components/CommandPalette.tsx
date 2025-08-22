@@ -7,6 +7,7 @@ export function useCommands(base: Partial<{
   onRescanTokens: ()=>void;
   onCopyCSS: ()=>void;
   onCopyJSON: ()=>void;
+  onMigrateTokens: ()=>void;
   onNewComponent: ()=>void;
   onImportJSON: ()=>void;
   onExportJSON: ()=>void;
@@ -28,6 +29,7 @@ export function useCommands(base: Partial<{
     base.onRescanTokens && { id:'tokens:rescan', label:'Tokens: Re‑scan', group:'Tokens', run: base.onRescanTokens },
     base.onCopyCSS     && { id:'tokens:copycss', label:'Tokens: Copy as CSS', group:'Tokens', run: base.onCopyCSS },
     base.onCopyJSON    && { id:'tokens:copyjson',label:'Tokens: Copy as JSON', group:'Tokens', run: base.onCopyJSON },
+    base.onMigrateTokens && { id:'tokens:migrate', label:'Tokens: Migrate Legacy', group:'Tokens', hint:'Migrate old token names to semantic variables', run: base.onMigrateTokens },
 
     base.onNewComponent&& { id:'comp:new',       label:'Components: New', group:'Components', run: base.onNewComponent },
     base.onImportJSON  && { id:'comp:import',    label:'Components: Import JSON', group:'Components', run: base.onImportJSON },
@@ -95,42 +97,127 @@ export function CommandPalette({ commands }: { commands: Cmd[] }) {
 
   if (!open) return null;
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex items-start justify-center p-6"
-         style={{background:'rgba(0,0,0,.35)'}} onClick={()=>setOpen(false)}>
-      <div className="w-full max-w-xl rounded-2xl border" onClick={(e)=>e.stopPropagation()}
-           style={{background:'var(--color-panel)', borderColor:'var(--color-border)'}}>
-        <div className="p-3 border-b" style={{borderColor:'var(--color-border)'}}>
+    <div 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="command-palette-title"
+      className="adsm-modal-overlay"
+      onClick={()=>setOpen(false)}
+    >
+      <div 
+        className="adsm-modal-content"
+        onClick={(e)=>e.stopPropagation()}
+        style={{
+          background: 'var(--modal-content-bg)',
+          border: '2px solid var(--modal-content-border)',
+          maxWidth: '600px',
+          padding: 0
+        }}
+      >
+        <div className="adsm-modal-header" style={{borderBottom: '1px solid var(--modal-content-border)'}}>
+          <h2 id="command-palette-title" className="adsm-modal-title" style={{margin: 0}}>
+            Command Palette
+          </h2>
+        </div>
+        <div style={{padding: '16px', borderBottom: '1px solid var(--modal-content-border)'}}>
           <input 
             ref={inputRef} 
             value={q} 
             onChange={e=>setQ(e.target.value)} 
             placeholder="Type a command… (Esc to close)"
-            className="w-full bg-transparent outline-none" 
-            style={{color:'var(--color-text)'}} 
+            className="adsm-modal-input"
+            style={{
+              background: 'var(--input-bg)',
+              color: 'var(--modal-body-text)',
+              border: '2px solid var(--input-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 16px',
+              fontSize: '14px',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+            aria-label="Search commands"
           />
         </div>
-        <ul className="max-h-80 overflow-auto">
-          {results.map((c,idx)=> (
-            <li key={c.id}>
-              <button 
-                onClick={()=>run(c)} 
-                className="w-full text-left px-4 py-2 focus:outline-none"
-                style={{
-                  color:'var(--color-text)',
-                  background: idx === selectedIndex ? 'var(--color-accent)' : 'transparent'
-                }}
-                onMouseEnter={() => setSelectedIndex(idx)}
-              >
-                <div className="text-[14px]">{c.label}</div>
-                {c.hint && <div className="text-[12px] opacity-60">{c.hint}</div>}
-                {c.group && <div className="text-[11px] opacity-40">{c.group}</div>}
-              </button>
-            </li>
-          ))}
-          {!results.length && <li className="px-4 py-3 text-[13px]" style={{color:'var(--color-muted)'}}>No matches</li>}
-        </ul>
-        <div className="px-4 py-2 border-t text-[11px] opacity-60" style={{borderColor:'var(--color-border)', color:'var(--color-muted)'}}>
-          {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'} to open • ↑↓ to navigate • Enter to select • Esc to close
+        <div className="adsm-modal-body" style={{padding: 0, maxHeight: '320px', overflow: 'auto'}}>
+          <ul role="listbox" aria-label="Command options">
+            {results.map((c,idx)=> (
+              <li key={c.id} role="option" aria-selected={idx === selectedIndex}>
+                <button 
+                  onClick={()=>run(c)} 
+                  className="w-full text-left focus:outline-none"
+                  style={{
+                    color: 'var(--modal-body-text)',
+                    background: idx === selectedIndex ? 'var(--color-accent)' : 'transparent',
+                    padding: '12px 20px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    minHeight: '44px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '4px'
+                  }}
+                  onMouseEnter={() => setSelectedIndex(idx)}
+                  onFocus={() => setSelectedIndex(idx)}
+                  aria-describedby={c.hint ? `hint-${c.id}` : undefined}
+                >
+                  <div style={{fontSize: '14px', fontWeight: '500'}}>{c.label}</div>
+                  {c.hint && (
+                    <div 
+                      id={`hint-${c.id}`}
+                      style={{
+                        fontSize: '12px', 
+                        color: 'var(--modal-description-text)',
+                        lineHeight: '1.4'
+                      }}
+                    >
+                      {c.hint}
+                    </div>
+                  )}
+                  {c.group && (
+                    <div style={{
+                      fontSize: '11px', 
+                      color: 'var(--modal-description-text)',
+                      opacity: 0.8,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      {c.group}
+                    </div>
+                  )}
+                </button>
+              </li>
+            ))}
+            {!results.length && (
+              <li style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: 'var(--modal-description-text)',
+                fontSize: '14px'
+              }}>
+                No commands match your search
+              </li>
+            )}
+          </ul>
+        </div>
+        <div className="adsm-modal-footer" style={{
+          padding: '12px 20px',
+          borderTop: '1px solid var(--modal-content-border)',
+          fontSize: '12px',
+          color: 'var(--modal-description-text)',
+          justifyContent: 'center',
+          textAlign: 'center'
+        }}>
+          <div style={{display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center'}}>
+            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>
+              {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'}
+            </kbd> to open</span>
+            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>↑↓</kbd> to navigate</span>
+            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>Enter</kbd> to select</span>
+            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>Esc</kbd> to close</span>
+          </div>
         </div>
       </div>
     </div>

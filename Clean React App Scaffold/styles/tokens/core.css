@@ -1,0 +1,68 @@
+/* Core foundational tokens - spacing, typography, borders, touch targets */
+
+:root {
+  --font-size: 14px;
+  
+  /* Layout tokens */
+  --app-topbar-h: 56px;
+  --z-topbar: 50;
+  --z-drawer: 60;
+  
+  /* Drawer layout tokens */
+  --adsm-drawer-width: 720px;
+  --adsm-drawer-header-h: 68px;
+  --adsm-drawer-tabs-h: 48px;
+  --adsm-drawer-pad: 16px;
+  --adsm-drawer-gap: 16px;
+  --adsm-drawer-radius: var(--radius-md);
+  --adsm-drawer-border: var(--color-border);
+  
+  /* Spacing tokens - foundational for atomic design */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  
+  /* Typography tokens */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Touch target tokens for accessibility */
+  --touch-target-sm: 32px;
+  --touch-target-md: 44px;
+  --touch-target-lg: 48px;
+  
+  /* Border radius tokens */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+  
+  /* Legacy radius for compatibility */
+  --radius: 0.625rem;
+  
+  /* Divider tokens */
+  --divider-thickness-sm: 1px;
+  --divider-thickness-md: 2px;
+  --divider-thickness-lg: 3px;
+}

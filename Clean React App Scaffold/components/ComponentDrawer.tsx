@@ -8,12 +8,40 @@ import { PreviewPane } from '../preview/PreviewPane';
 import { PropsEditor, useCurrentProps } from '../preview/PropsEditor';
 import { useFocusTrap } from '../utils/useFocusTrap';
 import { useThumbCapture } from '../utils/snapshot';
+import { auditDrawerContrast, applyContrastFallbacks, captureDrawerScreenshot, getHighContrastTokens, getCurrentTheme } from '../diagnostics/utils';
+import { safeLogEvent } from '../diagnostics/logger';
 import '../styles/preview.css';
 import '../styles/drawer.css';
 
 export type DrawerTab = 'preview' | 'notes' | 'props' | 'json';
 
-// Enhanced Live Preview component with props editor and thumbnail capture
+// Screen reader announcement utility
+function announceToScreenReader(message: string) {
+  const announcement = document.createElement('div');
+  announcement.setAttribute('aria-live', 'polite');
+  announcement.setAttribute('aria-atomic', 'true');
+  announcement.className = 'sr-only';
+  announcement.style.cssText = `
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  `;
+  
+  document.body.appendChild(announcement);
+  announcement.textContent = message;
+  
+  setTimeout(() => {
+    document.body.removeChild(announcement);
+  }, 1000);
+}
+
+// Enhanced Live Preview component with accessible props editor
 function DrawerPreview({ item }: { item: DsComponent }) {
   const [currentProps, setCurrentProps] = React.useState<Record<string, any>>({});
   
@@ -23,47 +51,45 @@ function DrawerPreview({ item }: { item: DsComponent }) {
   // Handle props changes from the new system
   const handlePropsChange = React.useCallback((props: Record<string, any>) => {
     setCurrentProps(props);
-  }, []);
+    // Announce changes to screen readers
+    announceToScreenReader(`Preview properties updated for ${item.name}`);
+  }, [item.name]);
 
   // Auto-capture thumbnail when preview or props change using the dedicated hook
   useThumbCapture(item.id, [currentProps, previewId]);
 
   return (
-    <div style={{ display: 'grid', gap: '16px' }}>
+    <div className="preview-section">
       {/* Preview Area */}
-      <section>
-        <h4 style={{ 
-          margin: '0 0 8px', 
-          fontSize: '14px', 
-          fontWeight: '600',
-          color: 'var(--color-text)'
-        }}>
-          Preview
+      <section className="adsm-section" role="region" aria-labelledby="preview-heading">
+        <h4 id="preview-heading">
+          Live Preview
         </h4>
         
-        {/* Try new preview system first */}
-        <PreviewPane 
-          id={previewId}
-          props={{...item.demo?.props, ...currentProps}}
-        />
+        <div 
+          style={{
+            border: '2px solid var(--adsm-drawer-border)',
+            borderRadius: 'var(--adsm-drawer-radius)',
+            background: 'var(--color-background)',
+            overflow: 'hidden',
+            minHeight: '120px'
+          }}
+          role="img"
+          aria-label={`Preview of ${item.name} component`}
+        >
+          <PreviewPane 
+            id={previewId}
+            props={{...item.demo?.props, ...currentProps}}
+          />
+        </div>
       </section>
 
       {/* Props Editor - New System */}
-      <section>
-        <h4 style={{ 
-          margin: '0 0 12px', 
-          fontSize: '14px', 
-          fontWeight: '600',
-          color: 'var(--color-text)'
-        }}>
-          Properties
+      <section className="adsm-section" role="region" aria-labelledby="props-editor-heading">
+        <h4 id="props-editor-heading">
+          Properties Editor
         </h4>
-        <div style={{
-          padding: '16px',
-          background: 'var(--color-panel)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-        }}>
+        <div className="props-editor">
           <PropsEditor 
             id={previewId}
             onPropsChange={handlePropsChange}
@@ -80,6 +106,21 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
   onEdit: () => void;
   returnRef?: React.RefObject<HTMLElement>;
 }) {
+  // Defensive check - if component is invalid, close drawer immediately
+  React.useEffect(() => {
+    if (!item || !item.id || !item.name) {
+      console.error('ComponentDrawer: Invalid component data received', { item });
+      onClose();
+      return;
+    }
+  }, [item, onClose]);
+
+  // Early return if component is invalid - prevents render errors
+  if (!item || !item.id || !item.name) {
+    console.warn('ComponentDrawer: Rendering prevented due to invalid component data');
+    return null;
+  }
+
   // Create portal container
   const [portalContainer] = React.useState(() => {
     const container = document.createElement('div');
@@ -93,8 +134,10 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
 
   // Refs for focus management
   const drawerRef = React.useRef<HTMLDivElement>(null);
+  const firstTabRef = React.useRef<HTMLButtonElement>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   
-  // Mount portal and manage body scroll lock
+  // Mount portal and manage body scroll lock with accessibility audit
   React.useEffect(() => {
     document.body.appendChild(portalContainer);
     
@@ -103,6 +146,161 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
     const originalBodyOverflow = document.body.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+
+    // Focus the first tab after mounting
+    setTimeout(() => {
+      firstTabRef.current?.focus();
+      announceToScreenReader(`Component drawer opened for ${item.name}. Use Tab to navigate, Escape to close.`);
+    }, 100);
+
+    // Run accessibility audit after drawer is mounted and rendered
+    setTimeout(async () => {
+      try {
+        // Capture screenshot before any fixes
+        const screenshotBefore = await captureDrawerScreenshot();
+        
+        // Run comprehensive contrast audit
+        const auditResult = auditDrawerContrast();
+        
+        // Log initial audit results
+        safeLogEvent('info', 'drawer/accessibility-audit', {
+          event: 'drawer_accessibility_audit',
+          component: {
+            id: item.id,
+            name: item.name,
+            level: item.level
+          },
+          audit: {
+            totalElements: auditResult.totalElements,
+            accessibleElements: auditResult.accessibleElements,
+            failedElements: auditResult.failedElements,
+            averageContrast: auditResult.averageContrast,
+            issueCount: auditResult.issues.length,
+            criticalIssues: auditResult.issues.filter(i => i.severity === 'critical').length,
+            theme: auditResult.theme
+          },
+          tokenMappings: auditResult.tokenMappings,
+          timestamp: Date.now()
+        });
+
+        // Apply automatic fallbacks for critical issues
+        if (auditResult.issues.some(i => i.severity === 'critical')) {
+          const fixesApplied = applyContrastFallbacks(auditResult);
+          
+          if (fixesApplied > 0) {
+            // Capture screenshot after fixes
+            const screenshotAfter = await captureDrawerScreenshot();
+            
+            // Run audit again to verify fixes
+            const auditAfterFixes = auditDrawerContrast();
+            
+            // Log fallback application results
+            safeLogEvent('info', 'drawer/contrast-fallbacks', {
+              event: 'drawer_contrast_fallbacks_applied',
+              component: {
+                id: item.id,
+                name: item.name
+              },
+              fallbacks: {
+                fixesApplied,
+                beforeFailures: auditResult.failedElements,
+                afterFailures: auditAfterFixes.failedElements,
+                improvementCount: auditResult.failedElements - auditAfterFixes.failedElements,
+                averageContrastBefore: auditResult.averageContrast,
+                averageContrastAfter: auditAfterFixes.averageContrast
+              },
+              appliedFixes: auditAfterFixes.issues
+                .filter(i => i.fallbackApplied)
+                .map(i => ({
+                  element: i.element,
+                  fromToken: i.fallbackApplied?.fromToken,
+                  toToken: i.fallbackApplied?.toToken,
+                  contrastImprovement: (i.fallbackApplied?.newContrast || 0) - i.currentContrast
+                })),
+              screenshots: {
+                before: screenshotBefore,
+                after: screenshotAfter
+              },
+              timestamp: Date.now()
+            });
+
+            // Announce improvements to screen reader users
+            announceToScreenReader(`Accessibility improvements applied: ${fixesApplied} contrast issues automatically fixed`);
+          }
+        }
+
+        // Apply high-contrast tokens if needed and user has high-contrast preference
+        if (window.matchMedia && window.matchMedia('(prefers-contrast: high)').matches) {
+          const highContrastTokens = getHighContrastTokens(getCurrentTheme());
+          const root = document.documentElement;
+          
+          let highContrastApplied = 0;
+          for (const [token, value] of Object.entries(highContrastTokens)) {
+            root.style.setProperty(token, value);
+            highContrastApplied++;
+          }
+          
+          if (highContrastApplied > 0) {
+            safeLogEvent('info', 'drawer/high-contrast', {
+              event: 'drawer_high_contrast_applied',
+              component: { id: item.id, name: item.name },
+              tokensApplied: highContrastApplied,
+              tokens: highContrastTokens,
+              timestamp: Date.now()
+            });
+
+            announceToScreenReader('High contrast mode detected, enhanced accessibility tokens applied');
+          }
+        }
+
+        // Log detailed accessibility metrics for manual review
+        safeLogEvent('info', 'drawer/accessibility-metrics', {
+          event: 'drawer_accessibility_metrics_detailed',
+          component: { id: item.id, name: item.name },
+          metrics: {
+            totalTextElements: auditResult.totalElements,
+            wcagAACompliant: auditResult.accessibleElements,
+            complianceRate: auditResult.totalElements > 0 ? 
+              Number((auditResult.accessibleElements / auditResult.totalElements * 100).toFixed(1)) : 0,
+            averageContrastRatio: auditResult.averageContrast,
+            issuesByType: {
+              critical: auditResult.issues.filter(i => i.severity === 'critical').length,
+              warning: auditResult.issues.filter(i => i.severity === 'warning').length,
+              info: auditResult.issues.filter(i => i.severity === 'info').length
+            },
+            elementBreakdown: auditResult.issues.reduce((acc, issue) => {
+              const elementType = issue.element.split('-')[0];
+              acc[elementType] = (acc[elementType] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>)
+          },
+          detailedIssues: auditResult.issues.map(issue => ({
+            element: issue.element,
+            selector: issue.selector,
+            currentContrast: issue.currentContrast,
+            requiredContrast: issue.requiredContrast,
+            isAccessible: issue.isAccessible,
+            severity: issue.severity,
+            textToken: issue.textToken,
+            backgroundToken: issue.backgroundToken,
+            recommendations: issue.recommendations,
+            fallbackApplied: issue.fallbackApplied
+          })),
+          timestamp: Date.now()
+        });
+
+      } catch (error) {
+        // Log audit errors for debugging
+        safeLogEvent('error', 'drawer/accessibility-audit-error', {
+          event: 'drawer_accessibility_audit_failed',
+          component: { id: item.id, name: item.name },
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: Date.now()
+        });
+        
+        console.warn('Drawer accessibility audit failed:', error);
+      }
+    }, 250); // Wait for drawer animation and render
 
     // Cleanup on unmount
     return () => {
@@ -116,19 +314,30 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
       // Return focus to the element that opened the drawer
       if (returnRef?.current) {
         returnRef.current.focus();
+        announceToScreenReader('Component drawer closed, focus returned to component card');
       }
     };
-  }, [portalContainer, returnRef]);
+  }, [portalContainer, returnRef, item.name, item.id, item.level]);
 
-  // Focus trap
+  // Enhanced focus trap with better keyboard navigation
   useFocusTrap(drawerRef);
 
-  // Handle escape key globally
+  // Handle escape key and other keyboard shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+      }
+      
+      // Alt + 1-4 for quick tab switching
+      if (e.altKey && e.key >= '1' && e.key <= '4') {
+        e.preventDefault();
+        const tabIndex = parseInt(e.key) - 1;
+        const tabIds: DrawerTab[] = ['preview', 'notes', 'props', 'json'];
+        if (tabIds[tabIndex]) {
+          selectTab(tabIds[tabIndex]);
+        }
       }
     };
 
@@ -136,10 +345,19 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Tab selection with hash update
+  // Tab selection with hash update and announcements
   const selectTab = React.useCallback((newTab: DrawerTab) => {
     setTab(newTab);
     setHashParam('tab', newTab);
+    
+    // Announce tab change
+    const tabLabels = {
+      preview: 'Preview',
+      notes: 'Notes',
+      props: 'Properties',
+      json: 'JSON Data'
+    };
+    announceToScreenReader(`Switched to ${tabLabels[newTab]} tab`);
   }, []);
 
   // Listen for hash changes to sync tab state
@@ -156,10 +374,10 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
   }, [tab]);
 
   const tabs = [
-    { id: 'preview' as const, label: 'Preview' },
-    { id: 'notes' as const, label: 'Notes' },
-    { id: 'props' as const, label: 'Props' },
-    { id: 'json' as const, label: 'JSON' }
+    { id: 'preview' as const, label: 'Preview', shortcut: 'Alt+1' },
+    { id: 'notes' as const, label: 'Notes', shortcut: 'Alt+2' },
+    { id: 'props' as const, label: 'Props', shortcut: 'Alt+3' },
+    { id: 'json' as const, label: 'JSON', shortcut: 'Alt+4' }
   ];
 
   // Handle backdrop click
@@ -184,187 +402,150 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
         aria-describedby="adsm-drawer-description"
       >
         {/* Sticky Header */}
-        <header className="adsm-drawer-head">
-          <div className="adsm-drawer-title-section">
-            <h2 
-              id="adsm-drawer-title"
-              className="adsm-drawer-title"
-            >
+        <div className="adsm-drawer-header">
+          <div>
+            <h2 id="adsm-drawer-title">
               {item.name}
             </h2>
-            <div id="adsm-drawer-description" className="sr-only">
-              Component details drawer for {item.name}. Use Tab and Shift+Tab to navigate, Escape to close.
+            <div 
+              id="adsm-drawer-description" 
+              className="meta"
+            >
+              {item.level} • {item.status} • v{item.version}
             </div>
           </div>
           
-          <nav className="adsm-drawer-tabs" role="tablist">
-            {tabs.map(t => (
-              <button 
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === tab}
-                aria-controls={`panel-${t.id}`}
-                onClick={() => selectTab(t.id)}
-                className="adsm-drawer-tab"
-                data-active={t.id === tab}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-          
           <button 
-            className="adsm-drawer-close" 
+            ref={closeButtonRef}
+            className="adsm-drawer-close"
             onClick={onClose}
-            aria-label="Close component details drawer"
+            aria-label={`Close ${item.name} component drawer`}
           >
             ✕
           </button>
-        </header>
+        </div>
+        
+        {/* Tabs Bar (separate sticky row) */}
+        <div className="adsm-drawer-tabs" role="tablist" aria-label="Component details sections">
+          {tabs.map((t, index) => (
+            <button 
+              key={t.id}
+              ref={index === 0 ? firstTabRef : undefined}
+              role="tab"
+              aria-selected={t.id === tab}
+              aria-controls={`panel-${t.id}`}
+              id={`tab-${t.id}`}
+              onClick={() => selectTab(t.id)}
+              title={`${t.label} (${t.shortcut})`}
+              className="adsm-tab"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Scrollable Content */}
-        <section 
-          className="adsm-drawer-body"
-          role="tabpanel"
-          id={`panel-${tab}`}
-          aria-labelledby={`tab-${tab}`}
-        >
-          {tab === 'preview' && (
-            <div>
+        {/* Scrollable Content Body */}
+        <div className="adsm-drawer-body">
+          <div
+            role="tabpanel"
+            id={`panel-${tab}`}
+            aria-labelledby={`tab-${tab}`}
+            tabIndex={-1}
+          >
+            {tab === 'preview' && (
               <DrawerPreview item={item} />
-            </div>
-          )}
+            )}
 
-          {tab === 'notes' && (
-            <div>
-              <h4 style={{ 
-                margin: '0 0 12px', 
-                fontSize: '14px', 
-                fontWeight: '600',
-                color: 'var(--color-text)'
-              }}>
-                Notes
-              </h4>
-              <div style={{ 
-                padding: '16px',
-                background: 'var(--color-background)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                lineHeight: 1.5,
-                minHeight: '120px'
-              }}>
-                {item.notes?.trim() ? (
-                  <div style={{ 
-                    whiteSpace: 'pre-wrap', 
-                    color: 'var(--color-text)',
-                    fontSize: '14px'
-                  }}>
-                    {item.notes}
+            {tab === 'notes' && (
+              <div role="region" aria-labelledby="notes-heading">
+                <h3 id="notes-heading" className="adsm-section h2">
+                  Component Notes
+                </h3>
+                <div className="adsm-drawer-notes" role="article" aria-label={`Notes for ${item.name} component`}>
+                  {item.notes?.trim() ? (
+                    <div className="adsm-drawer-notes-content">
+                      {item.notes}
+                    </div>
+                  ) : (
+                    <div className="adsm-drawer-notes-empty">
+                      No notes have been added for this component yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {tab === 'props' && (
+              <div role="region" aria-labelledby="props-spec-heading">
+                <h3 id="props-spec-heading" className="adsm-section h2">
+                  Properties Specification
+                </h3>
+                {Array.isArray(item.propsSpec) && item.propsSpec.length > 0 ? (
+                  <div className="adsm-drawer-props-spec">
+                    <div className="adsm-drawer-props-spec-grid">
+                      {item.propsSpec.map((spec, index) => (
+                        <div 
+                          key={`${spec.name}-${index}`} 
+                          className="adsm-drawer-props-spec-item"
+                          role="article"
+                          aria-labelledby={`prop-${index}-name`}
+                        >
+                          <div 
+                            id={`prop-${index}-name`}
+                            className="adsm-drawer-props-spec-name"
+                          >
+                            {spec.label || spec.name}
+                            {spec.required && (
+                              <span 
+                                className="adsm-drawer-props-spec-required"
+                                aria-label="required"
+                              >
+                                *
+                              </span>
+                            )}
+                          </div>
+                          <div className="adsm-drawer-props-spec-meta">
+                            <div><strong>Type:</strong> {spec.kind || 'text'}</div>
+                            {spec.default !== undefined && (
+                              <div><strong>Default:</strong> {String(spec.default)}</div>
+                            )}
+                            {spec.required && (
+                              <div><strong>Required:</strong> Yes</div>
+                            )}
+                          </div>
+                          {spec.description && (
+                            <div className="adsm-drawer-props-spec-description">
+                              {spec.description}
+                            </div>
+                          )}
+                          {spec.options && spec.options.length > 0 && (
+                            <div className="adsm-drawer-props-spec-options">
+                              <strong>Options:</strong> {spec.options.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100px',
-                    color: 'var(--color-muted-foreground)',
-                    fontSize: '14px',
-                    fontStyle: 'italic'
-                  }}>
-                    No notes added yet.
+                  <div className="adsm-drawer-empty">
+                    No properties specification has been defined for this component.
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {tab === 'props' && (
-            <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '600' }}>Properties</h4>
-              {Array.isArray(item.propsSpec) && item.propsSpec.length > 0 ? (
-                <div style={{
-                  padding: '16px',
-                  background: 'var(--color-panel)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                }}>
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {item.propsSpec.map((spec, index) => (
-                      <div key={`${spec.name}-${index}`} style={{
-                        padding: '8px',
-                        background: 'var(--color-background)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px',
-                      }}>
-                        <div style={{ 
-                          fontSize: '14px', 
-                          fontWeight: '600', 
-                          color: 'var(--color-text)',
-                          marginBottom: '4px'
-                        }}>
-                          {spec.label || spec.name}
-                          {spec.required && <span style={{ color: 'var(--color-destructive)' }}> *</span>}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: 'var(--color-muted-foreground)',
-                          marginBottom: '4px'
-                        }}>
-                          Type: {spec.kind || 'text'}
-                          {spec.default !== undefined && ` • Default: ${spec.default}`}
-                        </div>
-                        {spec.description && (
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: 'var(--color-text)',
-                            lineHeight: 1.4
-                          }}>
-                            {spec.description}
-                          </div>
-                        )}
-                        {spec.options && spec.options.length > 0 && (
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: 'var(--color-muted-foreground)',
-                            marginTop: '4px'
-                          }}>
-                            Options: {spec.options.join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{
-                  padding: '24px',
-                  background: 'var(--color-muted)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                  color: 'var(--color-muted-foreground)',
-                  fontSize: '14px'
-                }}>
-                  No props specification defined.
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab === 'json' && (
-            <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '600' }}>Component Data</h4>
-              <pre style={{
-                padding: '12px',
-                background: 'var(--color-panel)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                lineHeight: '1.4',
-                overflowX: 'auto',
-                color: 'var(--color-text)',
-                fontFamily: 'Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-              }}>
+            {tab === 'json' && (
+              <div role="region" aria-labelledby="json-heading">
+                <h3 id="json-heading" className="adsm-section h2">
+                  Component Data (JSON)
+                </h3>
+                <div className="adsm-drawer-json">
+                  <pre 
+                    role="code"
+                    aria-label={`JSON data for ${item.name} component`}
+                    tabIndex={0}
+                  >
 {JSON.stringify({
   id: item.id, 
   name: item.name, 
@@ -379,130 +560,87 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
   propsSpec: Array.isArray(item.propsSpec) ? item.propsSpec : [], 
   code: item.code || ''
 }, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {/* Metadata sections - always visible across all tabs */}
-          <div style={{ 
-            marginTop: '24px', 
-            paddingTop: '16px', 
-            borderTop: '1px solid var(--color-border)' 
-          }}>
-            {item?.description && (
-              <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ 
-                  margin: '0 0 8px', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: 'var(--color-text)'
-                }}>
-                  Description
-                </h4>
-                <p style={{ 
-                  margin: 0, 
-                  lineHeight: 1.5, 
-                  color: 'var(--color-text)',
-                  padding: '12px',
-                  background: 'var(--color-background)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '14px'
-                }}>
-                  {item.description}
-                </p>
-              </div>
-            )}
-
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '12px',
-              fontSize: '12px',
-              color: 'var(--color-muted-foreground)'
-            }}>
-              <div>
-                <strong>Level:</strong> {item.level}
-              </div>
-              <div>
-                <strong>Status:</strong> {item.status}
-              </div>
-              <div>
-                <strong>Version:</strong> {item.version}
-              </div>
-              <div>
-                <strong>ID:</strong> {item.id}
-              </div>
-            </div>
-
-            {Array.isArray(item.tags) && item.tags.length > 0 && (
-              <div style={{ marginTop: '16px' }}>
-                <h4 style={{ 
-                  margin: '0 0 8px', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: 'var(--color-text)'
-                }}>
-                  Tags
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {item.tags.map((tag, index) => (
-                    <span 
-                      key={`${tag}-${index}`} 
-                      style={{
-                        padding: '2px 8px',
-                        background: 'var(--color-muted)',
-                        color: 'var(--color-muted-foreground)',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  </pre>
                 </div>
               </div>
             )}
 
-            {Array.isArray(item.dependencies) && item.dependencies.length > 0 && (
-              <div style={{ marginTop: '16px' }}>
-                <h4 style={{ 
-                  margin: '0 0 8px', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: 'var(--color-text)'
-                }}>
-                  Dependencies
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {item.dependencies.map((dep, index) => (
-                    <span 
-                      key={`${dep}-${index}`} 
-                      style={{
-                        padding: '2px 8px',
-                        background: 'var(--color-accent)',
-                        color: 'var(--color-accent-foreground)',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      {dep}
-                    </span>
-                  ))}
+            {/* Enhanced Metadata sections */}
+            <div className="adsm-drawer-metadata">
+              {item?.description && (
+                <div style={{ marginBottom: '24px' }} role="region" aria-labelledby="description-heading">
+                  <h4 id="description-heading" className="adsm-section h2">
+                    Description
+                  </h4>
+                  <div className="adsm-section">
+                    {item.description}
+                  </div>
+                </div>
+              )}
+
+              <div className="adsm-drawer-metadata-grid" role="list" aria-label="Component metadata">
+                <div className="adsm-drawer-metadata-item" role="listitem">
+                  <strong>Level:</strong> <span style={{ textTransform: 'capitalize' }}>{item.level}</span>
+                </div>
+                <div className="adsm-drawer-metadata-item" role="listitem">
+                  <strong>Status:</strong> <span style={{ textTransform: 'capitalize' }}>{item.status}</span>
+                </div>
+                <div className="adsm-drawer-metadata-item" role="listitem">
+                  <strong>Version:</strong> {item.version}
+                </div>
+                <div className="adsm-drawer-metadata-item" role="listitem">
+                  <strong>ID:</strong> <code style={{ fontSize: '12px', background: 'var(--color-muted)', padding: '2px 4px', borderRadius: '3px' }}>{item.id}</code>
                 </div>
               </div>
-            )}
-          </div>
-        </section>
 
-        {/* Optional Footer */}
-        <footer className="adsm-drawer-foot">
-          <div style={{ fontSize: '12px', color: 'var(--color-muted-foreground)' }}>
-            Use Tab/Shift+Tab to navigate • ESC to close
+              {Array.isArray(item.tags) && item.tags.length > 0 && (
+                <div className="adsm-drawer-tags" role="region" aria-labelledby="tags-heading">
+                  <h4 id="tags-heading">Tags</h4>
+                  <div 
+                    className="adsm-drawer-tags-list"
+                    role="list"
+                    aria-label={`${item.tags.length} tags for ${item.name}`}
+                  >
+                    {item.tags.map((tag, index) => (
+                      <span 
+                        key={`${tag}-${index}`} 
+                        className="adsm-drawer-tag adsm-chip--tag"
+                        role="listitem"
+                        aria-label={`Tag: ${tag}`}
+                        tabIndex={0}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(item.dependencies) && item.dependencies.length > 0 && (
+                <div className="adsm-drawer-tags" role="region" aria-labelledby="deps-heading">
+                  <h4 id="deps-heading">Dependencies</h4>
+                  <div 
+                    className="adsm-drawer-tags-list"
+                    role="list"
+                    aria-label={`${item.dependencies.length} dependencies for ${item.name}`}
+                  >
+                    {item.dependencies.map((dep, index) => (
+                      <span 
+                        key={`${dep}-${index}`} 
+                        className="adsm-drawer-dependency adsm-chip--dependency"
+                        role="listitem"
+                        aria-label={`Dependency: ${dep}`}
+                        tabIndex={0}
+                      >
+                        {dep}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </footer>
+        </div>
       </aside>
     </div>
   );

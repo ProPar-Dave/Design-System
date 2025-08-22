@@ -1,0 +1,100 @@
+/* Light theme color tokens */
+/* NOTE: These values are overridden by themeManager.ts inline styles for deterministic theming */
+
+:root[data-theme="light"] {
+  /* Base colors - high contrast for light theme */
+  --background: #ffffff;
+  --foreground: #0B1020;  /* Dark text for light background */
+  --card: #ffffff;
+  --card-foreground: #0B1020;
+  --popover: #ffffff;
+  --popover-foreground: #0B1020;
+  --primary: #0B1020;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0B1020;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #e2e8f0;
+  --accent-foreground: #0B1020;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: #f8fafc;
+  --input-background: #f8fafc;
+  --switch-background: #cbd5e1;
+  --ring: #3b82f6;
+  
+  /* Sidebar colors */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #0B1020;
+  --sidebar-primary: #0B1020;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #334155;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #3b82f6;
+  
+  /* Chart colors */
+  --chart-1: #0ea5e9;
+  --chart-2: #10b981;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  
+  /* Legacy aliases - explicit values for light theme */
+  --color-bg: #ffffff;
+  --color-panel: #f8fafc;
+  --color-text: #0B1020;
+  --color-background: #ffffff;
+  --color-foreground: #0B1020;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #475569;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-primary: #0B1020;
+  --color-primary-foreground: #ffffff;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #3b82f6;
+  --color-accent: #e2e8f0;
+  --color-accent-foreground: #0B1020;
+  
+  /* Component tokens for light theme */
+  --chip-bg: #f1f5f9;
+  --chip-text: #334155;
+  --chip-border: #cbd5e1;
+  
+  --chip-info-bg: #dbeafe;
+  --chip-info-text: #1e40af;
+  --chip-info-border: #93c5fd;
+  
+  --chip-success-bg: #d1fae5;
+  --chip-success-text: #065f46;
+  --chip-success-border: #6ee7b7;
+  
+  --chip-warning-bg: #fef3c7;
+  --chip-warning-text: #92400e;
+  --chip-warning-border: #fcd34d;
+  
+  --chip-danger-bg: #fee2e2;
+  --chip-danger-text: #991b1b;
+  --chip-danger-border: #fca5a5;
+  
+  --button-primary-bg: #0B1020;
+  --button-primary-text: #ffffff;
+  --button-primary-hover: #1e293b;
+  --button-primary-active: #0f172a;
+  --button-primary-disabled: #94a3b8;
+  --button-primary-disabled-text: #ffffff;
+  
+  --button-secondary-bg: transparent;
+  --button-secondary-text: #0B1020;
+  --button-secondary-border: #cbd5e1;
+  --button-secondary-hover: #f1f5f9;
+  --button-secondary-active: #e2e8f0;
+  --button-secondary-disabled: #f8fafc;
+  --button-secondary-disabled-text: #94a3b8;
+  
+  /* Divider color */
+  --divider-color: rgba(0, 0, 0, 0.1);
+}

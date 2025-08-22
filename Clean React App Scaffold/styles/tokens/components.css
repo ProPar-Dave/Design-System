@@ -1,0 +1,286 @@
+/* Component-specific tokens for atomic design system */
+
+:root {
+  /* Button tokens - light theme */
+  --button-primary-bg: var(--primary);
+  --button-primary-text: var(--primary-foreground);
+  --button-primary-hover: #1e293b;
+  --button-primary-active: #0f172a;
+  --button-primary-disabled: var(--muted);
+  --button-primary-disabled-text: var(--muted-foreground);
+  
+  --button-secondary-bg: transparent;
+  --button-secondary-text: var(--foreground);
+  --button-secondary-border: var(--border);
+  --button-secondary-hover: var(--muted);
+  --button-secondary-active: var(--border);
+  --button-secondary-disabled: var(--muted);
+  --button-secondary-disabled-text: var(--muted-foreground);
+  
+  --button-ghost-bg: transparent;
+  --button-ghost-text: var(--foreground);
+  --button-ghost-hover: var(--muted);
+  --button-ghost-active: var(--border);
+  --button-ghost-disabled: transparent;
+  --button-ghost-disabled-text: var(--muted-foreground);
+  
+  --button-destructive-bg: var(--destructive);
+  --button-destructive-text: var(--destructive-foreground);
+  --button-destructive-hover: #b91c1c;
+  --button-destructive-active: #991b1b;
+  --button-destructive-disabled: var(--muted);
+  --button-destructive-disabled-text: var(--muted-foreground);
+  
+  /* Input tokens - light theme */
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
+  --input-placeholder: #475569;
+  --input-focus-border: #3b82f6;
+  --input-error-border: #dc2626;
+  --input-disabled-bg: #f1f5f9;
+  --input-disabled-text: #94a3b8;
+  
+  /* Checkbox and Radio tokens */
+  --checkbox-checked-bg: var(--primary);
+  --checkbox-checked-hover: #1e293b;
+  --checkbox-hover-bg: var(--muted);
+  --checkbox-hover-border: var(--primary);
+  
+  --radio-dot-color: var(--primary);
+  --radio-hover-bg: var(--muted);
+  --radio-hover-border: var(--primary);
+  
+  /* Switch tokens */
+  --switch-checked-bg: #3b82f6;
+  --switch-unchecked-bg: #e5e7eb;
+  --switch-disabled-bg: #f3f4f6;
+  --switch-checked-border: #3b82f6;
+  --switch-unchecked-border: var(--border);
+  --switch-disabled-border: var(--muted);
+  --switch-thumb-color: #ffffff;
+  --switch-thumb-disabled: var(--muted-foreground);
+  --switch-checked-hover: #2563eb;
+  --switch-unchecked-hover: var(--muted);
+  
+  /* Chip tokens */
+  --chip-bg: #eef2f7;
+  --chip-text: #0f172a;
+  --chip-border: #cbd5e1;
+  --chip-hover: #e2e8f0;
+  --chip-hover-border: #94a3b8;
+  
+  /* Chip tone variants */
+  --chip-neutral-bg: #eef2f7;
+  --chip-neutral-text: #0f172a;
+  --chip-neutral-border: #cbd5e1;
+  --chip-neutral-hover: #e2e8f0;
+  --chip-neutral-hover-border: #94a3b8;
+  
+  --chip-info-bg: #eff6ff;
+  --chip-info-text: #1e40af;
+  --chip-info-border: #93c5fd;
+  --chip-info-hover: #dbeafe;
+  --chip-info-hover-border: #60a5fa;
+  
+  --chip-success-bg: #f0fdf4;
+  --chip-success-text: #166534;
+  --chip-success-border: #86efac;
+  --chip-success-hover: #dcfce7;
+  --chip-success-hover-border: #4ade80;
+  
+  --chip-warning-bg: #fffbeb;
+  --chip-warning-text: #92400e;
+  --chip-warning-border: #fbbf24;
+  --chip-warning-hover: #fef3c7;
+  --chip-warning-hover-border: #f59e0b;
+  
+  --chip-danger-bg: #fef2f2;
+  --chip-danger-text: #991b1b;
+  --chip-danger-border: #fca5a5;
+  --chip-danger-hover: #fee2e2;
+  --chip-danger-hover-border: #f87171;
+  
+  /* Badge variants */
+  --badge-bg: #f3f4f6;
+  --badge-text: #374151;
+  --badge-border: #d1d5db;
+  
+  --badge-neutral-bg: #f3f4f6;
+  --badge-neutral-text: #374151;
+  --badge-neutral-border: #d1d5db;
+  
+  --badge-info-bg: #dbeafe;
+  --badge-info-text: #1e40af;
+  --badge-info-border: #3b82f6;
+  
+  --badge-success-bg: #dcfce7;
+  --badge-success-text: #166534;
+  --badge-success-border: #16a34a;
+  
+  --badge-warning-bg: #fef3c7;
+  --badge-warning-text: #92400e;
+  --badge-warning-border: #f59e0b;
+  
+  --badge-danger-bg: #fee2e2;
+  --badge-danger-text: #991b1b;
+  --badge-danger-border: #dc2626;
+  
+  /* Label tokens */
+  --label-text: #374151;
+  --label-disabled-text: #9ca3af;
+  --label-required-color: #dc2626;
+  
+  /* Help text tokens */
+  --help-text-color: #6b7280;
+  --help-text-error-color: #dc2626;
+  --help-text-warning-color: #f59e0b;
+  --help-text-success-color: #16a34a;
+  
+  /* Legacy input tokens for compatibility */
+  --adsm-input-bg: #f8fafc;
+  --adsm-input-fg: #1e293b;
+  --adsm-input-ph: #64748b;
+  --adsm-input-bd: #cbd5e1;
+  --adsm-input-bd-focus: #3b82f6;
+  --adsm-input-disabled-bg: #f1f5f9;
+  --adsm-input-disabled-fg: #94a3b8;
+}
+
+/* Dark theme component overrides */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  &:is(.dark *) {
+    /* Button tokens - dark theme */
+    --button-primary-bg: var(--primary);
+    --button-primary-text: var(--primary-foreground);
+    --button-primary-hover: #e5e7eb;
+    --button-primary-active: #d1d5db;
+    
+    --button-secondary-text: var(--foreground);
+    --button-secondary-border: var(--border);
+    --button-secondary-hover: var(--muted);
+    --button-secondary-active: #374151;
+    
+    --button-ghost-text: var(--foreground);
+    --button-ghost-hover: var(--muted);
+    --button-ghost-active: #374151;
+    
+    --button-destructive-bg: var(--destructive);
+    --button-destructive-text: var(--destructive-foreground);
+    --button-destructive-hover: #ef4444;
+    --button-destructive-active: #f87171;
+    
+    /* Input tokens - dark theme */
+    --input-bg: #1a1a1a;
+    --input-border: #374151;
+    --input-text: #f1f5f9;
+    --input-placeholder: #9ca3af;
+    --input-focus-border: #60a5fa;
+    --input-error-border: #ef4444;
+    --input-disabled-bg: #262626;
+    --input-disabled-text: #6b7280;
+    
+    /* Checkbox and Radio - dark theme */
+    --checkbox-checked-bg: var(--primary);
+    --checkbox-checked-hover: #e5e7eb;
+    --checkbox-hover-bg: var(--muted);
+    --checkbox-hover-border: var(--primary);
+    
+    --radio-dot-color: var(--primary);
+    --radio-hover-bg: var(--muted);
+    --radio-hover-border: var(--primary);
+    
+    /* Switch - dark theme */
+    --switch-checked-bg: #60a5fa;
+    --switch-unchecked-bg: #374151;
+    --switch-disabled-bg: #262626;
+    --switch-checked-border: #60a5fa;
+    --switch-unchecked-border: var(--border);
+    --switch-thumb-color: #ffffff;
+    --switch-checked-hover: #3b82f6;
+    --switch-unchecked-hover: var(--muted);
+    
+    /* Chip tokens - dark theme */
+    --chip-bg: #1f2937;
+    --chip-text: #f9fafb;
+    --chip-border: #374151;
+    --chip-hover: #374151;
+    --chip-hover-border: #4b5563;
+    
+    --chip-neutral-bg: #1f2937;
+    --chip-neutral-text: #f9fafb;
+    --chip-neutral-border: #374151;
+    --chip-neutral-hover: #374151;
+    --chip-neutral-hover-border: #4b5563;
+    
+    --chip-info-bg: #1e3a8a;
+    --chip-info-text: #bfdbfe;
+    --chip-info-border: #1d4ed8;
+    --chip-info-hover: #1e40af;
+    --chip-info-hover-border: #2563eb;
+    
+    --chip-success-bg: #14532d;
+    --chip-success-text: #bbf7d0;
+    --chip-success-border: #16a34a;
+    --chip-success-hover: #166534;
+    --chip-success-hover-border: #22c55e;
+    
+    --chip-warning-bg: #92400e;
+    --chip-warning-text: #fef3c7;
+    --chip-warning-border: #f59e0b;
+    --chip-warning-hover: #a16207;
+    --chip-warning-hover-border: #eab308;
+    
+    --chip-danger-bg: #7f1d1d;
+    --chip-danger-text: #fecaca;
+    --chip-danger-border: #dc2626;
+    --chip-danger-hover: #991b1b;
+    --chip-danger-hover-border: #ef4444;
+    
+    /* Badge - dark theme */
+    --badge-bg: #374151;
+    --badge-text: #e5e7eb;
+    --badge-border: #4b5563;
+    
+    --badge-neutral-bg: #374151;
+    --badge-neutral-text: #e5e7eb;
+    --badge-neutral-border: #4b5563;
+    
+    --badge-info-bg: #1e40af;
+    --badge-info-text: #dbeafe;
+    --badge-info-border: #3b82f6;
+    
+    --badge-success-bg: #166534;
+    --badge-success-text: #dcfce7;
+    --badge-success-border: #16a34a;
+    
+    --badge-warning-bg: #a16207;
+    --badge-warning-text: #fef3c7;
+    --badge-warning-border: #eab308;
+    
+    --badge-danger-bg: #991b1b;
+    --badge-danger-text: #fee2e2;
+    --badge-danger-border: #ef4444;
+    
+    /* Label - dark theme */
+    --label-text: #e5e7eb;
+    --label-disabled-text: #6b7280;
+    
+    /* Help text - dark theme */
+    --help-text-color: #9ca3af;
+    --help-text-error-color: #ef4444;
+    --help-text-warning-color: #eab308;
+    --help-text-success-color: #22c55e;
+    
+    /* Legacy input tokens - dark theme */
+    --adsm-input-bg: #1a1a1a;
+    --adsm-input-fg: #f1f5f9;
+    --adsm-input-ph: #9ca3af;
+    --adsm-input-bd: #374151;
+    --adsm-input-bd-focus: #60a5fa;
+    --adsm-input-disabled-bg: #262626;
+    --adsm-input-disabled-fg: #6b7280;
+  }
+}

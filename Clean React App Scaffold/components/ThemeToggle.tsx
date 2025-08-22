@@ -1,12 +1,12 @@
 import React from 'react';
-import { setTheme, getTheme } from '../boot';
+import { toggleTheme, getTheme, type ThemeName } from '../src/theme/themeManager';
 
 export function ThemeToggle() {
-  const [currentTheme, setCurrentTheme] = React.useState<'light' | 'dark'>(getTheme);
+  const [currentTheme, setCurrentTheme] = React.useState<ThemeName>(getTheme);
 
   React.useEffect(() => {
     const handleThemeChange = (e: CustomEvent) => {
-      setCurrentTheme(e.detail as 'light' | 'dark');
+      setCurrentTheme(e.detail.theme as ThemeName);
     };
     
     document.addEventListener('adsm:theme:changed', handleThemeChange as EventListener);
@@ -16,20 +16,15 @@ export function ThemeToggle() {
   }, []);
 
   const handleToggle = () => {
-    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
+    const nextTheme = toggleTheme();
+    setCurrentTheme(nextTheme);
   };
 
   return (
     <button
       onClick={handleToggle}
+      className="adsm-button-secondary"
       style={{
-        background: 'var(--button-bg)',
-        color: 'var(--button-fg)',
-        border: '1px solid var(--button-border)',
-        borderRadius: '8px',
-        padding: '6px 10px',
-        cursor: 'pointer',
         fontSize: '14px',
         fontWeight: 500,
         display: 'flex',

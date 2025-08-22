@@ -1,0 +1,100 @@
+/* Dark theme color tokens */
+/* NOTE: These values are overridden by themeManager.ts inline styles for deterministic theming */
+
+:root[data-theme="dark"] {
+  /* Base dark colors - high contrast for dark theme */
+  --background: #0B1020;
+  --foreground: #E2E8F0;  /* Light text for dark background */
+  --card: #0F162E;
+  --card-foreground: #E2E8F0;
+  --popover: #0F162E;
+  --popover-foreground: #E2E8F0;
+  --primary: #E2E8F0;
+  --primary-foreground: #0B1020;
+  --secondary: #1E293B;
+  --secondary-foreground: #E2E8F0;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #334155;
+  --accent-foreground: #E2E8F0;
+  --destructive: #EF4444;
+  --destructive-foreground: #0B1020;
+  --border: #334155;
+  --input: #1E293B;
+  --input-background: #1E293B;
+  --switch-background: #475569;
+  --ring: #60A5FA;
+  
+  /* Sidebar dark colors */
+  --sidebar: #0B1020;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #E2E8F0;
+  --sidebar-primary-foreground: #0B1020;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #E2E8F0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #60A5FA;
+  
+  /* Chart dark colors */
+  --chart-1: #0ea5e9;
+  --chart-2: #10b981;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  
+  /* Legacy aliases for dark - explicit values */
+  --color-bg: #0B1020;
+  --color-panel: #0F162E;
+  --color-text: #E2E8F0;
+  --color-background: #0B1020;
+  --color-foreground: #E2E8F0;
+  --color-muted: #1E293B;
+  --color-muted-foreground: #94A3B8;
+  --color-border: #334155;
+  --color-primary: #E2E8F0;
+  --color-primary-foreground: #0B1020;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #0B1020;
+  --color-ring: #60A5FA;
+  --color-accent: #334155;
+  --color-accent-foreground: #E2E8F0;
+  
+  /* Component tokens for dark theme */
+  --chip-bg: #1E293B;
+  --chip-text: #CBD5E1;
+  --chip-border: #475569;
+  
+  --chip-info-bg: #1E3A8A;
+  --chip-info-text: #BFDBFE;
+  --chip-info-border: #3B82F6;
+  
+  --chip-success-bg: #14532D;
+  --chip-success-text: #BBF7D0;
+  --chip-success-border: #22C55E;
+  
+  --chip-warning-bg: #92400E;
+  --chip-warning-text: #FEF3C7;
+  --chip-warning-border: #F59E0B;
+  
+  --chip-danger-bg: #991B1B;
+  --chip-danger-text: #FECACA;
+  --chip-danger-border: #EF4444;
+  
+  --button-primary-bg: #E2E8F0;
+  --button-primary-text: #0B1020;
+  --button-primary-hover: #F1F5F9;
+  --button-primary-active: #F8FAFC;
+  --button-primary-disabled: #475569;
+  --button-primary-disabled-text: #64748B;
+  
+  --button-secondary-bg: transparent;
+  --button-secondary-text: #E2E8F0;
+  --button-secondary-border: #475569;
+  --button-secondary-hover: #1E293B;
+  --button-secondary-active: #334155;
+  --button-secondary-disabled: #1E293B;
+  --button-secondary-disabled-text: #64748B;
+  
+  /* Divider color for dark */
+  --divider-color: #334155;
+}

@@ -1,35 +1,37 @@
 // utils/theme.ts
 
+import { ensureThemeContrast, getThemeContrastDiagnostics } from './themeContrast';
+
 export const THEMES = {
   dark: {
-    '--color-bg': '#0A0B10',
-    '--color-panel': '#0F1117',
-    '--color-text': '#E6ECFF',
+    '--color-bg': '#0B1020',
+    '--color-panel': '#0F162E',
+    '--color-text': '#E2E8F0',
     '--color-accent': '#3B82F6',
-    '--color-muted': '#8B95A7',
-    '--color-border': '#1F2332',
+    '--color-muted': '#94A3B8',
+    '--color-border': '#334155',
     '--space-4': '16px',
     '--radius-md': '10px',
     '--font-size-base': '14px',
-    '--color-background': '#0A0B10',
-    '--color-foreground': '#E6ECFF',
+    '--color-background': '#0B1020',
+    '--color-foreground': '#E2E8F0',
     '--color-primary': '#3B82F6',
-    '--color-secondary': '#1F2332'
+    '--color-secondary': '#1E293B'
   },
   light: {
     '--color-bg': '#FFFFFF',
-    '--color-panel': '#F9FAFB',
-    '--color-text': '#111827',
+    '--color-panel': '#F8FAFC',
+    '--color-text': '#0B1020',
     '--color-accent': '#3B82F6',
-    '--color-muted': '#6B7280',
-    '--color-border': '#E5E7EB',
+    '--color-muted': '#475569',
+    '--color-border': '#E2E8F0',
     '--space-4': '16px',
     '--radius-md': '10px',
     '--font-size-base': '14px',
     '--color-background': '#FFFFFF',
-    '--color-foreground': '#111827',
+    '--color-foreground': '#0B1020',
     '--color-primary': '#3B82F6',
-    '--color-secondary': '#F3F4F6'
+    '--color-secondary': '#F1F5F9'
   }
 } as const;
 
@@ -108,22 +110,22 @@ function deriveButtonPair(accentHex: string, textHex: string, min = 4.5) {
 
 export function computeInteractive(theme: Theme, base: Record<string, string>) {
   const accent = base['--color-accent'] || '#3B82F6';
-  const text = base['--color-text'] || base['--color-foreground'] || '#E6ECFF';
+  const text = base['--color-text'] || base['--color-foreground'] || (theme === 'dark' ? '#E2E8F0' : '#0B1020');
   const { bg, fg } = deriveButtonPair(accent, text, 4.5);
   
   return {
     '--button-bg': bg,
     '--button-fg': fg,
     '--button-bg-hover': theme === 'dark' ? lighten(hexToRgb(bg), 1.1) : darken(hexToRgb(bg), 0.9),
-    '--button-border': base['--color-border'] || '#1F2332'
+    '--button-border': base['--color-border'] || (theme === 'dark' ? '#334155' : '#E2E8F0')
   };
 }
 
 function ensureStyleEl(): HTMLStyleElement {
-  let el = document.getElementById('adsm-theme') as HTMLStyleElement;
+  let el = document.getElementById('adsm-theme-override') as HTMLStyleElement;
   if (!el) {
     el = document.createElement('style');
-    el.id = 'adsm-theme';
+    el.id = 'adsm-theme-override';
     document.head.appendChild(el);
   }
   return el;
@@ -135,14 +137,15 @@ export function injectThemeTokens(theme: Theme = currentTheme) {
   const interactive = computeInteractive(theme, vars);
   Object.assign(vars, interactive);
   
-  const css = `html[data-theme="${theme}"]{` + 
-    Object.entries(vars).map(([k, v]) => `${k}:${v}!important;`).join('') + 
+  const css = `html[data-theme="${theme}"] {` + 
+    Object.entries(vars).map(([k, v]) => `${k}: ${v} !important;`).join('') + 
     `}\n`;
   
   // Guard re-injection to prevent unnecessary DOM writes
   if (css !== lastCss) {
     el.textContent = css;
     lastCss = css;
+    console.log(`Injected theme tokens for ${theme}`);
   }
 }
 
@@ -159,10 +162,26 @@ export function getTheme(): Theme {
 }
 
 export function setTheme(theme: Theme) {
+  console.log(`Setting theme to: ${theme}`);
   currentTheme = theme;
   localStorage.setItem('adsm:theme', theme);
   document.documentElement.setAttribute('data-theme', theme);
+  
+  // Apply CSS-defined theme first
   injectThemeTokens(theme);
+  
+  // Then verify and auto-correct contrast if needed
+  setTimeout(() => {
+    const correctionMade = ensureThemeContrast();
+    if (correctionMade) {
+      console.log('Theme contrast auto-correction applied');
+    }
+    
+    // Log final diagnostics
+    const diagnostics = getThemeContrastDiagnostics();
+    console.log('Final theme diagnostics:', diagnostics);
+  }, 100);
+  
   document.dispatchEvent(new CustomEvent('adsm:theme:changed', { detail: theme }));
 }
 
@@ -175,6 +194,8 @@ export function toggleTheme() {
 let writeTimeout: number | null = null;
 
 export function applyOverrides(root: HTMLElement, theme: Theme, overrides: Record<string, string>) {
+  console.log('Applying overrides:', overrides);
+  
   // Apply immediately to DOM for instant feedback
   Object.entries(overrides).forEach(([key, value]) => {
     root.style.setProperty(key, value);
@@ -189,6 +210,9 @@ export function applyOverrides(root: HTMLElement, theme: Theme, overrides: Recor
       const updated = { ...existing, ...overrides };
       localStorage.setItem(key, JSON.stringify(updated));
       injectThemeTokens(theme);
+      
+      // Verify contrast after applying overrides
+      setTimeout(() => ensureThemeContrast(), 50);
     } catch (e) {
       console.warn('Failed to save theme overrides:', e);
     }
@@ -212,14 +236,27 @@ export function clearOverrides(theme: Theme) {
   Object.keys(THEMES[theme]).forEach(key => {
     root.style.removeProperty(key);
   });
-  window.location.reload(); // Ensure clean state
+  
+  // Verify contrast after clearing
+  setTimeout(() => ensureThemeContrast(), 50);
 }
 
 // Initialize theme system
 export function initTheme() {
+  console.log('Initializing theme system...');
   const theme = getTheme();
+  
+  // Set attribute first
   document.documentElement.setAttribute('data-theme', theme);
+  
+  // Apply theme tokens
   injectThemeTokens(theme);
+  
+  // Verify contrast after initial load
+  setTimeout(() => {
+    const correctionMade = ensureThemeContrast();
+    console.log('Theme initialized:', theme, correctionMade ? '(with corrections)' : '(no corrections needed)');
+  }, 100);
   
   // Listen for theme toggle events
   document.addEventListener('adsm:theme:toggle', () => {
@@ -229,5 +266,7 @@ export function initTheme() {
   // Dispatch ready event
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent('adsm:tokens-ready'));
-  }, 50);
+  }, 150);
+  
+  return theme;
 }

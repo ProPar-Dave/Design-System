@@ -2,10 +2,15 @@ import React from 'react';
 
 export default function NotFound() {
   const handleGoHome = () => {
-    window.location.hash = '#/';
+    // Use consistent navigation method
+    if (window.location.hash !== '#/') {
+      window.history.pushState(null, '', '#/');
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
   };
 
   const handleGoBack = () => {
+    // Try to go back in history, otherwise go home
     if (window.history.length > 1) {
       window.history.back();
     } else {

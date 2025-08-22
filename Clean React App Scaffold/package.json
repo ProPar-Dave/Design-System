@@ -1,0 +1,103 @@
+{
+  "name": "atomic-ds-manager",
+  "version": "1.2.0",
+  "description": "A comprehensive design system management tool with component catalog, token editor, and accessibility compliance",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles": "./dist/adsm.css",
+    "./tokens": "./dist/tokens.json",
+    "./catalog": "./dist/catalog.json"
+  },
+  "files": [
+    "dist/",
+    "catalog.json",
+    "tokens.json",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run clean && npm run build:vite && npm run build:artifacts",
+    "build:vite": "vite build",
+    "build:artifacts": "node scripts/build.js",
+    "preview": "vite preview",
+    "clean": "rimraf dist catalog.json tokens.json",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "test:artifacts": "node -e \"console.log('Testing artifacts...'); require('./scripts/build.js').main()\"",
+    "analyze": "npm run build && bundlesize",
+    "ci:build": "npm ci && npm run build",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1",
+    "recharts": "^2.8.0",
+    "react-hook-form": "^7.55.0",
+    "sonner": "^2.0.3",
+    "motion": "^10.16.4",
+    "react-dnd": "^16.0.1",
+    "react-slick": "^0.29.0",
+    "react-responsive-masonry": "^2.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "rimraf": "^5.0.5",
+    "bundlesize": "^0.18.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  },
+  "bundlesize": [
+    {
+      "path": "./dist/index.js",
+      "maxSize": "500KB",
+      "compression": "gzip"
+    },
+    {
+      "path": "./dist/adsm.css", 
+      "maxSize": "50KB",
+      "compression": "gzip"
+    }
+  ],
+  "keywords": [
+    "design-system",
+    "component-library", 
+    "tokens",
+    "accessibility",
+    "wcag",
+    "react",
+    "typescript",
+    "atomic-design"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/atomic-ds-manager.git"
+  },
+  "license": "MIT",
+  "author": "Atomic DS Manager Contributors",
+  "bugs": {
+    "url": "https://github.com/your-org/atomic-ds-manager/issues"
+  },
+  "homepage": "https://github.com/your-org/atomic-ds-manager#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

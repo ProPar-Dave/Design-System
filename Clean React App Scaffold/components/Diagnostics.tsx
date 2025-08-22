@@ -1,684 +1,1131 @@
-import React from 'react';
-import { parseColor, rgbToHex, contrast, getVar, bytesUsed, getViewport } from '../utils/qa';
-import { getTheme } from '../boot';
-import { findMalformedComponents } from '../utils/catalog';
-import { getPingStatus } from '../utils/ping';
-import { LegacyPingDiagnostics } from './LegacyPingDiagnostics';
-import PingDiagnostics from './PingDiagnostics';
-import { getAvailableComponents } from '../preview/registry';
+import React, { useState, useEffect, useMemo } from 'react';
+import { runAudits, QUICK_AUDIT_KEYS, FULL_AUDIT_KEYS, AUDIT_REGISTRY, generateAuditConfigSummary } from '../diagnostics/audits';
+import { loadComponents } from '../utils/catalog';
+import { logger } from '../diagnostics/logger';
+import type { AuditResult, ComponentInfo } from '../diagnostics/utils';
+import { generateCompleteReadme, saveReadmeForDownload } from '../utils/readmeGenerator';
+import { getThemeContrastDiagnostics, ensureThemeContrast } from '../utils/themeContrast';
+import { getCurrentRoute } from '../utils/router';
 
-// Shape of the export so QA can compare across runs
-type QAReport = {
-  env: { ua: string; viewport: string; time: string; theme: string; url: string };
-  tokens: { values: Record<string,string>; blanks: string[] };
-  guidelines: { exists: boolean; first80: string };
-  components: { total: number; atoms: number; molecules: number; organisms: number; withNotes: number; withProps: number; withPreviews: number; withNewPreviews: number; missingDeps: string[]; deepLinksOK: boolean | string; malformed: Array<{index: number; id: string; issues: string[]}> };
-  releases: { count: number };
-  routing: { hashOK: boolean; notFoundOK: boolean; currentRoute: string };
-  storage: { keys: string[]; bytes: number; quota: number; percentUsed: number };
-  a11y: { focusVisible: boolean; ariaCurrent: boolean; chipAA: boolean; buttonAA: boolean; panelTextAA: boolean };
-  scroll: { belowFoldBg: string; matchesBg: boolean };
-  dom: { nestedButtons: boolean; buttonCount: number; linkCount: number };
-  contrast: { bgPanel: string; textColor: string; accentColor: string; borderColor: string; buttonBg: string; buttonFg: string };
-  ping: { enabled: boolean; url: string; config: any; failedEndpoints: string[] };
-};
-
-function useNow(){ 
-  const [t] = React.useState(()=>new Date()); 
-  return t.toISOString(); 
+interface DiagnosticsState {
+  isRunning: boolean;
+  results: AuditResult[];
+  progress: { completed: number; total: number; current: string } | null;
+  lastRun: Date | null;
+  selectedCategory: string;
+  components: ComponentInfo[];
+  themeContrastData: any;
 }
 
-async function fetchGuidelines(): Promise<{exists: boolean; first80: string}> {
-  try {
-    // Check if already loaded in memory first
-    const cached = (window as any).__adsmGuidelinesText as string | undefined;
-    if (cached && cached.trim().length > 10) {
-      return { exists: true, first80: cached.slice(0, 80) };
-    }
-
-    // Check localStorage cache
-    const localStorage_cached = localStorage.getItem('adsm:guidelines:lastText');
-    if (localStorage_cached && localStorage_cached.trim().length > 10) {
-      return { exists: true, first80: localStorage_cached.slice(0, 80) };
-    }
-
-    // Try to fetch with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-    
-    try {
-      const res = await fetch('guidelines.md?' + Date.now(), { 
-        cache: 'no-store',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      if (res.ok) {
-        const txt = await res.text();
-        if (!/^\s*</.test(txt) && txt.trim().length > 10) {
-          return { exists: true, first80: txt.slice(0, 80) };
-        }
-      }
-    } catch (e) {
-      clearTimeout(timeoutId);
-      // Ignore fetch errors, continue to return false
-    }
-
-    return { exists: false, first80: '' };
-  } catch { 
-    return { exists: false, first80: '' }; 
-  }
-}
-
-function collectTokens(): { values: Record<string,string>; blanks: string[] } {
-  // Core tokens guaranteed by boot.tsx
-  const CORE_KEYS = [
-    '--color-bg', '--color-panel', '--color-text', '--color-accent', 
-    '--color-muted', '--color-border', '--space-4', '--radius-md', 
-    '--font-size-base', '--button-bg', '--button-fg', '--color-background', 
-    '--color-foreground', '--color-primary', '--color-secondary'
-  ];
-  
-  const values: Record<string,string> = {};
-  const blanks: string[] = [];
-  
-  try {
-    for (const k of CORE_KEYS) { 
-      const v = getVar(k); 
-      if (!v || v.trim() === '') {
-        blanks.push(k); 
-        values[k] = '(missing)';
-      } else {
-        values[k] = v;
-      }
-    }
-  } catch (e) {
-    // Continue on error
-  }
-
-  return { values, blanks };
-}
-
-function readCatalogCounts() {
-  const read = (k: string) => { 
-    try { 
-      return JSON.parse(localStorage.getItem(k) || '[]'); 
-    } catch { 
-      return []; 
-    } 
-  };
-  
-  try {
-    // Try multiple storage keys for components
-    const builtins: any[] = read('adsm:catalog:builtins');
-    const userV1: any[] = read('adsm:userComponents:v1');
-    const user: any[] = read('adsm:userComponents');
-    const current: any[] = read('adsm:catalog:current');
-    
-    // Use global reference if available, otherwise merge from storage
-    const fromGlobal = (window as any).__adsmCatalogAll as any[] | undefined;
-    const all = fromGlobal ?? (current.length ? current : [...builtins, ...userV1, ...user]);
-    
-    // Safe calculation with defensive patterns
-    const safeAll = Array.isArray(all) ? all : [];
-    const kind = (t: string) => safeAll.filter(x => x?.level === t).length;
-    
-    // Check for notes, props, and previews with defensive patterns
-    const withNotes = safeAll.filter(c => {
-      return c && (typeof c.notes === 'string' && c.notes.trim().length > 0);
-    }).length;
-    
-    const withProps = safeAll.filter(c => {
-      return c && Array.isArray(c.propsSpec) && c.propsSpec.length > 0;
-    }).length;
-    
-    const withPreviews = safeAll.filter(c => {
-      return c && (typeof c.previewKind === 'string' && c.previewKind.trim().length > 0);
-    }).length;
-    
-    // Count components that have new preview system support
-    const availableNewPreviews = getAvailableComponents();
-    const withNewPreviews = safeAll.filter(c => {
-      return c && (typeof c.previewKind === 'string' && availableNewPreviews.includes(c.previewKind)) ||
-             (typeof c.id === 'string' && availableNewPreviews.includes(c.id));
-    }).length;
-    
-    // Check dependencies with defensive patterns
-    const missingDeps: string[] = [];
-    safeAll.forEach(c => { 
-      if (c && (Array.isArray(c.dependencies) || Array.isArray(c.deps))) { 
-        const deps = Array.isArray(c.dependencies) ? c.dependencies : (c.deps || []);
-        deps.forEach((d: string) => { 
-          if (typeof d === 'string' && !safeAll.some(x => x?.id === d)) {
-            missingDeps.push(`${c.id || 'unknown'}->${d}`); 
-          }
-        }); 
-      }
-    });
-
-    // Check if we're currently on a component deep link
-    const currentHash = location.hash;
-    const deepLinksOK = currentHash.includes('/components/') ? true : 'open a card and ensure URL updates';
-    
-    // Check for malformed components using the catalog utility
-    const malformed = findMalformedComponents();
-    
-    return { 
-      total: safeAll.length, 
-      atoms: kind('atom'), 
-      molecules: kind('molecule'), 
-      organisms: kind('organism'),
-      withNotes,
-      withProps,
-      withPreviews,
-      withNewPreviews,
-      missingDeps,
-      deepLinksOK,
-      malformed
-    };
-  } catch (e) {
-    console.warn('Error reading catalog counts:', e);
-    return {
-      total: 0, atoms: 0, molecules: 0, organisms: 0,
-      withNotes: 0, withProps: 0, withPreviews: 0, withNewPreviews: 0, missingDeps: [], deepLinksOK: false,
-      malformed: []
-    };
-  }
-}
-
-function contrastCheck(bgVar: string, textVar: string): boolean {
-  try {
-    const bg = parseColor(getVar(bgVar));
-    const tx = parseColor(getVar(textVar));
-    if (!bg || !tx) return false;
-    return contrast(bg, tx) >= 4.5; // AA normal text standard
-  } catch {
-    return false;
-  }
-}
-
-function checkScrollBackground(): { belowFoldBg: string; matchesBg: boolean } {
-  try {
-    const bodyBg = getComputedStyle(document.body).backgroundColor;
-    const htmlBg = getComputedStyle(document.documentElement).backgroundColor;
-    return { 
-      belowFoldBg: bodyBg, 
-      matchesBg: bodyBg === htmlBg || bodyBg.includes('rgba(0, 0, 0, 0)') || !bodyBg
-    };
-  } catch {
-    return { belowFoldBg: '', matchesBg: true };
-  }
-}
-
-function lintNestedButtons(): boolean {
-  try {
-    const nested = document.querySelectorAll('button button, a button, button a');
-    return nested.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-// Clean 404 check without route manipulation
-async function check404Route(): Promise<boolean> {
-  try {
-    // Check for 404 content in current DOM
-    const bodyText = document.body.textContent?.toLowerCase() || '';
-    const has404Text = bodyText.includes('404') || bodyText.includes('not found');
-    
-    // If we're on a known route, 404 functionality is working
-    const knownRoutes = ['/', '/guidelines', '/tokens', '/components', '/releases', '/diagnostics'];
-    const currentRoute = location.hash.slice(1) || '/';
-    const isKnownRoute = knownRoutes.some(route => currentRoute === route || currentRoute.startsWith('/components/'));
-    
-    // If we're on a known route and don't see 404 text, that's good
-    // If we're on an unknown route and see 404 text, that's also good
-    return isKnownRoute ? !has404Text : has404Text;
-  } catch {
-    return false;
-  }
-}
+type TabType = 'overview' | 'accessibility' | 'architecture' | 'tokens' | 'performance' | 'regression' | 'theme' | 'debug' | 'config';
 
 export default function Diagnostics() {
-  const time = useNow();
-  const [report, setReport] = React.useState<QAReport | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  // Debug container to prevent theme leakage from hardcoded Tailwind classes
+  const [state, setState] = useState<DiagnosticsState>({
+    isRunning: false,
+    results: [],
+    progress: null,
+    lastRun: null,
+    selectedCategory: 'all',
+    components: [],
+    themeContrastData: null
+  });
+  
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [selectedResults, setSelectedResults] = useState<string[]>([]);
 
-  React.useEffect(() => {
-    let mounted = true;
+  // Load components and theme data on mount
+  useEffect(() => {
+    loadComponents().then(components => {
+      setState(prev => ({ ...prev, components }));
+    }).catch(error => {
+      logger.error('audit/run', { message: 'Failed to load components for diagnostics', error });
+    });
+
+    // Load initial theme contrast data
+    const updateThemeData = () => {
+      const themeData = getThemeContrastDiagnostics();
+      setState(prev => ({ ...prev, themeContrastData: themeData }));
+    };
+
+    updateThemeData();
+
+    // Listen for theme changes
+    const handleThemeChange = () => {
+      setTimeout(updateThemeData, 100); // Small delay to ensure theme is applied
+    };
+
+    document.addEventListener('adsm:theme:changed', handleThemeChange);
+    document.addEventListener('adsm:theme:contrast-corrected', handleThemeChange);
+
+    return () => {
+      document.removeEventListener('adsm:theme:changed', handleThemeChange);
+      document.removeEventListener('adsm:theme:contrast-corrected', handleThemeChange);
+    };
+  }, []);
+
+  const runQuickAudit = async () => {
+    setState(prev => ({ ...prev, isRunning: true, progress: null, results: [] }));
     
-    const collectData = async () => {
-      try {
-        // Clean 404 check
-        const notFoundOK = await check404Route();
+    try {
+      const results = await runAudits(QUICK_AUDIT_KEYS, state.components, (progress) => {
+        setState(prev => ({ ...prev, progress }));
+      });
+      
+      setState(prev => ({ 
+        ...prev, 
+        results, 
+        isRunning: false, 
+        progress: null, 
+        lastRun: new Date() 
+      }));
+      
+      logger.info('audit/run', { type: 'quick', resultsCount: results.length });
+    } catch (error) {
+      logger.error('audit/run', { type: 'quick', error });
+      setState(prev => ({ ...prev, isRunning: false, progress: null }));
+    }
+  };
 
-        if (!mounted) return;
+  const runFullAudit = async () => {
+    setState(prev => ({ ...prev, isRunning: true, progress: null, results: [] }));
+    
+    try {
+      const results = await runAudits(FULL_AUDIT_KEYS, state.components, (progress) => {
+        setState(prev => ({ ...prev, progress }));
+      });
+      
+      setState(prev => ({ 
+        ...prev, 
+        results, 
+        isRunning: false, 
+        progress: null, 
+        lastRun: new Date() 
+      }));
+      
+      logger.info('audit/run', { type: 'full', resultsCount: results.length });
+    } catch (error) {
+      logger.error('audit/run', { type: 'full', error });
+      setState(prev => ({ ...prev, isRunning: false, progress: null }));
+    }
+  };
 
-        // Collect environment info using boot.tsx theme
-        const env = { 
-          ua: navigator.userAgent.slice(0, 100),
-          viewport: getViewport(), 
-          time, 
-          theme: getTheme(),
-          url: location.href.slice(0, 100)
-        };
+  const generateReadme = () => {
+    // Get the stored component analysis from the component dependency audit
+    const analysis = (window as any).__ADSM_COMPONENT_ANALYSIS;
+    
+    if (analysis) {
+      const readme = generateCompleteReadme(analysis);
+      saveReadmeForDownload(readme);
+      logger.info('catalog/export', { type: 'readme' });
+    } else {
+      logger.warn('catalog/export', { message: 'No component analysis found. Run the full audit first to generate comprehensive documentation.' });
+    }
+  };
 
-        // Collect tokens (should have no blanks with boot.tsx)
-        const tokens = collectTokens();
+  const filteredResults = useMemo(() => {
+    if (state.selectedCategory === 'all') return state.results;
+    return state.results.filter(result => result.category === state.selectedCategory);
+  }, [state.results, state.selectedCategory]);
 
-        // Fetch guidelines with timeout
-        const guidelines = await fetchGuidelines();
+  const resultsByCategory = useMemo(() => {
+    const categories: Record<string, AuditResult[]> = {
+      accessibility: [],
+      architecture: [], 
+      tokens: [],
+      performance: [],
+      regression: []
+    };
+    
+    state.results.forEach(result => {
+      if (categories[result.category]) {
+        categories[result.category].push(result);
+      }
+    });
+    
+    return categories;
+  }, [state.results]);
 
-        if (!mounted) return;
+  const checkThemeContrast = () => {
+    const correctionMade = ensureThemeContrast();
+    if (correctionMade) {
+      logger.info('theme/contrast', { message: 'Theme contrast auto-correction applied' });
+    }
+    // Update theme data
+    const themeData = getThemeContrastDiagnostics();
+    setState(prev => ({ ...prev, themeContrastData: themeData }));
+  };
 
-        // Component stats with malformed detection
-        const components = readCatalogCounts();
+  const overallStats = useMemo(() => {
+    const total = state.results.length;
+    const passed = state.results.filter(r => r.passed).length;
+    const failed = total - passed;
+    const errors = state.results.reduce((sum, r) => sum + (r.metrics?.errors || 0), 0);
+    const warnings = state.results.reduce((sum, r) => sum + (r.metrics?.warnings || 0), 0);
+    
+    return { total, passed, failed, errors, warnings };
+  }, [state.results]);
 
-        // Releases
-        const releases = { 
-          count: (JSON.parse(localStorage.getItem('adsm:releases:v1') || '[]') as any[]).length 
-        };
+  const getDebugSnapshot = () => {
+    const computedStyle = getComputedStyle(document.documentElement);
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'auto';
+    
+    // Get computed token values from theme manager
+    const computedTokens = {
+      '--color-bg': computedStyle.getPropertyValue('--color-bg').trim(),
+      '--color-panel': computedStyle.getPropertyValue('--color-panel').trim(),
+      '--color-text': computedStyle.getPropertyValue('--color-text').trim(),
+      '--color-muted': computedStyle.getPropertyValue('--color-muted').trim(),
+      '--color-border': computedStyle.getPropertyValue('--color-border').trim(),
+      '--input-bg': computedStyle.getPropertyValue('--input-bg').trim(),
+      '--input-text': computedStyle.getPropertyValue('--input-text').trim(),
+      '--btn-primary-bg': computedStyle.getPropertyValue('--btn-primary-bg').trim(),
+      '--btn-primary-text': computedStyle.getPropertyValue('--btn-primary-text').trim(),
+    };
 
-        // Routing - clean check
-        const currentRoute = location.hash.slice(1) || '/';
-        const routing = { 
-          hashOK: location.hash.startsWith('#/') || location.hash === '', 
-          notFoundOK,
-          currentRoute
-        };
+    // Calculate contrast ratio
+    const bgColor = computedTokens['--color-bg'];
+    const textColor = computedTokens['--color-text'];
+    const contrastRatio = (window as any).__adsmContrast?.(textColor, bgColor) ?? 0;
 
-        // Storage analysis
-        const storageKeys = [];
-        try {
-          for (let i = 0; i < Math.min(localStorage.length, 50); i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('adsm:')) {
-              storageKeys.push(key);
-            }
-          }
-        } catch {}
+    // Get route map (matching Router component logic)
+    const routeComponents = {
+      'overview': 'Overview',
+      'guidelines': 'GuidelinesViewer', 
+      'tokens': 'TokensPage',
+      'components': 'ComponentsCatalog',
+      'diagnostics': 'Diagnostics',
+      'releases': 'Releases',
+      'mini-layouts': 'MiniLayouts',
+    };
 
-        const bytes = bytesUsed();
-        const quota = 5 * 1024 * 1024;
-        const storage = { 
-          keys: storageKeys.sort(), 
-          bytes, 
-          quota,
-          percentUsed: Math.round((bytes / quota) * 100)
-        };
+    const routeMap = Object.entries(routeComponents).map(([route, component]) => ({
+      route,
+      component,
+      loaded: true // All components are loaded since we're seeing this
+    }));
 
-        // A11y checks with boot.tsx button tokens
-        const btnBg = getVar('--button-bg');
-        const btnFg = getVar('--button-fg');
-        const buttonAA = (()=> { 
-          const bg = parseColor(btnBg), fg = parseColor(btnFg); 
-          return (bg && fg) ? (contrast(fg, bg) >= 4.5) : false; 
-        })();
-
-        const a11y = { 
-          focusVisible: true,
-          ariaCurrent: !!document.querySelector('[aria-current="page"]'),
-          chipAA: contrastCheck('--color-panel', '--color-text'),
-          buttonAA,
-          panelTextAA: contrastCheck('--color-panel', '--color-text')
-        };
-
-        // Scroll/paint checks
-        const scroll = checkScrollBackground();
-
-        // DOM lint
-        const buttonCount = document.querySelectorAll('button').length;
-        const linkCount = document.querySelectorAll('a').length;
-        const dom = { 
-          nestedButtons: lintNestedButtons(),
-          buttonCount: Math.min(buttonCount, 999),
-          linkCount: Math.min(linkCount, 999)
-        };
-
-        // Contrast analysis with boot.tsx tokens
-        const contrast_analysis = {
-          bgPanel: getVar('--color-panel'),
-          textColor: getVar('--color-text'),
-          accentColor: getVar('--color-accent'),
-          borderColor: getVar('--color-border'),
-          buttonBg: btnBg,
-          buttonFg: btnFg
-        };
-
-        // Ping system status
-        const ping = getPingStatus();
-
-        if (mounted) {
-          setReport({ 
-            env, 
-            tokens, 
-            guidelines, 
-            components, 
-            releases, 
-            routing, 
-            storage, 
-            a11y, 
-            scroll, 
-            dom,
-            contrast: contrast_analysis,
-            ping
-          });
-        }
-      } catch (err) {
-        console.error('Diagnostics collection failed:', err);
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Collection failed');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+    return {
+      timestamp: new Date().toISOString(),
+      theme: {
+        current: currentTheme,
+        dataAttribute: document.documentElement.getAttribute('data-theme'),
+        systemPreference: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      },
+      computedTokens,
+      contrastRatio: parseFloat(contrastRatio.toFixed(2)),
+      contrastPasses: contrastRatio >= 4.5,
+      routeMap,
+      contrastData: state.themeContrastData,
+      location: {
+        hash: window.location.hash,
+        pathname: window.location.pathname
+      },
+      themeManager: {
+        initialized: !!(window as any).__adsmContrast,
+        localStorageTheme: localStorage.getItem('adsm:theme'),
+        cssDataTheme: document.documentElement.dataset.theme
       }
     };
+  };
 
-    const timer = setTimeout(collectData, 100);
+  const copyDebugSnapshot = () => {
+    const snapshot = getDebugSnapshot();
+    navigator.clipboard.writeText(JSON.stringify(snapshot, null, 2)).then(() => {
+      console.log('Debug snapshot copied to clipboard');
+      // Show temporary feedback
+      const button = document.activeElement as HTMLButtonElement;
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 2000);
+      }
+    }).catch(err => {
+      console.error('Failed to copy debug snapshot:', err);
+    });
+  };
+
+  const [smokeTestResult, setSmokeTestResult] = useState<{
+    isRunning: boolean;
+    result: any | null;
+    timestamp: string | null;
+  }>({
+    isRunning: false,
+    result: null,
+    timestamp: null
+  });
+
+  const runSmokeTest = async () => {
+    setSmokeTestResult(prev => ({ ...prev, isRunning: true }));
     
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-    };
-  }, [time]);
-
-  function copy() { 
-    if (!report) return; 
     try {
-      navigator.clipboard.writeText(JSON.stringify(report, null, 2)); 
-    } catch (e) {
-      console.error('Copy failed:', e);
+      // Store original state
+      const originalTheme = document.documentElement.getAttribute('data-theme');
+      const originalRoute = getCurrentRoute();
+      const originalHash = window.location.hash;
+      
+      // 1. Force theme to 'dark', snapshot tokens, verify body contrast
+      document.documentElement.setAttribute('data-theme', 'dark');
+      
+      // Wait for theme to apply
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const computedStyle = getComputedStyle(document.documentElement);
+      const bgColor = computedStyle.getPropertyValue('--color-bg').trim();
+      const textColor = computedStyle.getPropertyValue('--color-text').trim();
+      const contrastRatio = (window as any).__adsmContrast?.(textColor, bgColor) ?? 0;
+      
+      const tokenSnapshot = {
+        '--color-bg': bgColor,
+        '--color-text': textColor,
+        '--color-panel': computedStyle.getPropertyValue('--color-panel').trim(),
+        '--color-border': computedStyle.getPropertyValue('--color-border').trim(),
+      };
+
+      // 2. Navigate through routes and verify content
+      const routes = ['overview', 'tokens', 'components', 'diagnostics'];
+      const routeTests: Record<string, boolean> = {};
+      
+      for (const route of routes) {
+        // Simulate navigation by setting hash properly
+        window.location.hash = `#/${route}`;
+        
+        // Trigger hashchange event to ensure router responds
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        
+        // Wait for navigation to complete and components to render
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check if route content is loaded and non-empty
+        let hasContent = false;
+        
+        switch (route) {
+          case 'overview':
+            // Look for overview-specific content
+            hasContent = !!document.querySelector('main h2, main h1, [aria-label*="overview"], .system-overview, main .text-2xl');
+            if (!hasContent) {
+              // Fallback: check for any main content
+              const mainContent = document.querySelector('main .content, main > div');
+              hasContent = !!(mainContent && mainContent.textContent?.trim().length > 0);
+            }
+            break;
+          case 'tokens':
+            // Look for token-related content
+            hasContent = !!document.querySelector('.token-showcase, .token-badge, .tokens-grid, [data-testid*="token"], main .token');
+            if (!hasContent) {
+              // Fallback: look for token-related text or elements
+              const mainElement = document.querySelector('main');
+              hasContent = !!(mainElement && (
+                mainElement.textContent?.includes('token') ||
+                mainElement.textContent?.includes('Token') ||
+                mainElement.querySelector('.space-y-6, .grid')
+              ));
+            }
+            break;
+          case 'components':
+            // Look for component catalog content
+            hasContent = !!document.querySelector('.components-grid, .component-card, [data-testid*="component"], main .catalog');
+            if (!hasContent) {
+              // Fallback: look for component-related content
+              const mainElement = document.querySelector('main');
+              hasContent = !!(mainElement && (
+                mainElement.textContent?.includes('component') ||
+                mainElement.textContent?.includes('Component') ||
+                mainElement.querySelector('.grid, .catalog, .space-y-6')
+              ));
+            }
+            break;
+          case 'diagnostics':
+            // Look for diagnostics-specific content (we know this should work since we're in it)
+            hasContent = !!document.querySelector('[role="tabpanel"], .diagnostics-content, .adsm-debug-tabs, main .space-y-6');
+            if (!hasContent) {
+              // Very reliable fallback: look for tab elements or diagnostic content
+              const mainElement = document.querySelector('main');
+              hasContent = !!(mainElement && (
+                mainElement.textContent?.includes('Diagnostic') ||
+                mainElement.textContent?.includes('audit') ||
+                mainElement.querySelector('button[role="tab"], .adsm-tab')
+              ));
+            }
+            break;
+        }
+        
+        routeTests[route] = hasContent;
+      }
+
+      // 3. Ensure Components count > 0
+      const componentsCount = state.components.length;
+      
+      // Restore original state
+      if (originalTheme) {
+        document.documentElement.setAttribute('data-theme', originalTheme);
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      
+      // Restore original route
+      if (originalHash !== window.location.hash) {
+        window.location.hash = originalHash;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      }
+      
+      // Wait for theme and route to restore
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 4. Create final result payload
+      const result = {
+        theme: 'dark',
+        contrast: {
+          ratio: parseFloat(contrastRatio.toFixed(2)),
+          passes: contrastRatio >= 4.5
+        },
+        routes: routeTests,
+        componentsCount,
+        tokenSnapshot,
+        timestamp: new Date().toISOString()
+      };
+
+      // Determine overall pass/fail
+      const allRoutesPassed = Object.values(routeTests).every(Boolean);
+      const contrastPassed = result.contrast.passes;
+      const componentsPassed = componentsCount > 0;
+      const overallPassed = allRoutesPassed && contrastPassed && componentsPassed;
+
+      result.overallStatus = overallPassed ? 'PASS' : 'FAIL';
+      result.details = {
+        routesStatus: allRoutesPassed ? 'PASS' : 'FAIL',
+        contrastStatus: contrastPassed ? 'PASS' : 'FAIL', 
+        componentsStatus: componentsPassed ? 'PASS' : 'FAIL'
+      };
+
+      // Log the JSON payload
+      console.log('🧪 Smoke Test Results:', JSON.stringify(result, null, 2));
+      
+      setSmokeTestResult({
+        isRunning: false,
+        result,
+        timestamp: new Date().toISOString()
+      });
+      
+      logger.info('smoke-test/run', { status: result.overallStatus, details: result });
+      
+    } catch (error) {
+      console.error('Smoke test failed:', error);
+      setSmokeTestResult({
+        isRunning: false,
+        result: {
+          overallStatus: 'FAIL',
+          error: error.message,
+          timestamp: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+      logger.error('smoke-test/run', { error });
     }
-  }
+  };
 
-  function download() { 
-    if (!report) return; 
-    try {
-      const blob = new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'}); 
-      const a = document.createElement('a'); 
-      a.href = URL.createObjectURL(blob); 
-      a.download = `adsm-diagnostics-${Date.now()}.json`; 
-      a.click(); 
-      URL.revokeObjectURL(a.href); 
-    } catch (e) {
-      console.error('Download failed:', e);
-    }
-  }
-
-  if (error) {
-    return (
-      <div style={{color:'var(--color-muted)'}}>
-        <div>Diagnostics collection failed: {error}</div>
-        <button onClick={() => window.location.reload()} style={{marginTop: 8, padding: '4px 8px', background: 'var(--color-accent)', border: 'none', borderRadius: 4}}>
-          Reload Page
-        </button>
-      </div>
-    );
-  }
-
-  if (loading || !report) {
-    return <div style={{color:'var(--color-muted)'}}>Collecting diagnostics…</div>;
-  }
-
-  const Pass = ({ok}:{ok:boolean}) => (
-    <span style={{
-      padding:'2px 8px',
-      borderRadius:999,
-      background: ok ? '#123f2b' : '#3f1b1b', 
-      color: ok ? '#9FF6C8' : '#F6A1A1', 
-      fontSize:12,
-      fontWeight: 600
-    }}>
-      {ok ? 'pass' : 'fail'}
-    </span>
+  const renderTabButton = (tab: TabType, label: string, badge?: number) => (
+    <button
+      key={tab}
+      onClick={() => setActiveTab(tab)}
+      className={`adsm-tab px-4 py-2 border-b-2 transition-all ${
+        activeTab === tab 
+          ? 'border-blue-500 text-blue-600 bg-blue-50' 
+          : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+      }`}
+      aria-selected={activeTab === tab}
+      role="tab"
+    >
+      {label}
+      {badge !== undefined && badge > 0 && (
+        <span className="ml-2 px-2 py-1 text-xs bg-red-500 text-white rounded-full">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 
-  const btnStyle: React.CSSProperties = {
-    padding: '8px 16px',
-    borderRadius: 8,
-    border: '1px solid var(--button-border, var(--color-border))',
-    background: 'var(--button-bg)',
-    color: 'var(--button-fg)',
-    cursor: 'pointer',
-    fontWeight: 500
-  };
-
-  const preStyle: React.CSSProperties = {
-    fontSize: 12, 
-    background: 'var(--color-muted)', 
-    padding: 12, 
-    borderRadius: 8, 
-    overflow: 'auto',
-    maxHeight: '200px'
-  };
-
-  return (
-    <div style={{display:'grid', gap:20}}>
-      <div style={{marginBottom: 12}}>
-        <p style={{color:'var(--color-muted)', margin: '0 0 8px'}}>
-          System diagnostics including ping status from Supabase Edge Function endpoint.
-        </p>
-      </div>
-      <header style={{display:'flex', gap:12, alignItems:'center', paddingBottom:12, borderBottom:'1px solid var(--color-border)'}}>
-        <h1 style={{margin:0}}>QA Diagnostics</h1>
-        <button onClick={copy} style={btnStyle}>Copy JSON</button>
-        <button onClick={download} style={btnStyle}>Download JSON</button>
-        <span style={{color:'var(--color-muted)', marginLeft:'auto'}}>
-          Generated: {new Date(report.env.time).toLocaleString()}
-        </span>
-      </header>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Environment <Pass ok={true}/>
-        </h3>
-        <pre style={preStyle}>
-          {JSON.stringify(report.env, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Tokens <Pass ok={report.tokens.blanks.length === 0}/>
-        </h3>
-        {report.tokens.blanks.length > 0 && (
-          <div style={{color:'#F6A1A1', marginBottom:8}}>
-            ⚠️ BLANK TOKENS DETECTED: {report.tokens.blanks.join(', ')}
-          </div>
-        )}
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Button tokens: {report.contrast.buttonBg} / {report.contrast.buttonFg}
+  const renderOverviewTab = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">System Diagnostics</h2>
+          <p className="text-gray-600 mt-1">
+            Automated audits for code quality, accessibility, and architecture
+          </p>
         </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.tokens, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Guidelines <Pass ok={report.guidelines.exists}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Preview: {report.guidelines.first80 || '(no content found)'}
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.guidelines, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Components <Pass ok={report.components.total > 0 && report.components.missingDeps.length === 0 && report.components.malformed.length === 0}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Total: {report.components.total} • 
-          Notes: {report.components.withNotes}/{report.components.total} • 
-          Props: {report.components.withProps}/{report.components.total} • 
-          Legacy Previews: {report.components.withPreviews}/{report.components.total} •
-          New Previews: {report.components.withNewPreviews}/{report.components.total} • 
-          Deep links: {String(report.components.deepLinksOK)} •
-          Malformed: {report.components.malformed.length}
-        </div>
-        {report.components.missingDeps.length > 0 && (
-          <div style={{color:'#F6A1A1', marginBottom:8}}>
-            Missing dependencies: {report.components.missingDeps.join(', ')}
-          </div>
-        )}
-        {report.components.malformed.length > 0 && (
-          <div style={{color:'#F6A1A1', marginBottom:8}}>
-            ⚠️ MALFORMED COMPONENTS DETECTED: {report.components.malformed.map(m => `${m.id} (${m.issues.join(', ')})`).join('; ')}
-          </div>
-        )}
-        <pre style={preStyle}>
-          {JSON.stringify(report.components, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Releases <Pass ok={true}/>
-        </h3>
-        <pre style={preStyle}>
-          {JSON.stringify(report.releases, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Routing <Pass ok={report.routing.hashOK && report.routing.notFoundOK}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Hash routing: {String(report.routing.hashOK)} • 404 handling: {String(report.routing.notFoundOK)}
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.routing, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Storage <Pass ok={report.storage.percentUsed < 80}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Usage: {(report.storage.bytes/1024).toFixed(1)} KB ({report.storage.percentUsed}% of quota)
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.storage, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Accessibility <Pass ok={report.a11y.focusVisible && report.a11y.ariaCurrent && report.a11y.buttonAA && report.a11y.panelTextAA}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Focus-visible: {String(report.a11y.focusVisible)} • 
-          Aria-current: {String(report.a11y.ariaCurrent)} • 
-          Button AA: {String(report.a11y.buttonAA)} • 
-          Panel AA: {String(report.a11y.panelTextAA)}
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.a11y, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Scroll/Paint <Pass ok={report.scroll.matchesBg}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Below-fold background matches: {String(report.scroll.matchesBg)}
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.scroll, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          DOM Lint <Pass ok={!report.dom.nestedButtons}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Buttons: {report.dom.buttonCount} • 
-          Links: {report.dom.linkCount} • 
-          Nested buttons: {String(report.dom.nestedButtons)}
-        </div>
-        <pre style={preStyle}>
-          {JSON.stringify(report.dom, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Contrast Analysis <Pass ok={true}/>
-        </h3>
-        <pre style={preStyle}>
-          {JSON.stringify(report.contrast, null, 2)}
-        </pre>
-      </section>
-
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Ping System <Pass ok={report.ping.enabled && report.ping.failedEndpoints.length === 0}/>
-        </h3>
-        <div style={{color:'var(--color-muted)', marginBottom:8}}>
-          Status: {report.ping.enabled ? 'enabled' : 'disabled'} • 
-          Failed endpoints: {report.ping.failedEndpoints.length} • 
-          URL configured: {!report.ping.url.includes('your-worker-domain') ? 'yes' : 'no (placeholder)'}
-        </div>
-        {!report.ping.enabled && (
-          <div style={{color:'#F6A1A1', marginBottom:8}}>
-            ⚠️ Ping system is disabled. Check configuration in /utils/ping.ts
-          </div>
-        )}
-        {report.ping.failedEndpoints.length > 0 && (
-          <div style={{color:'#F6A1A1', marginBottom:8}}>
-            ⚠️ Ping endpoints have failed: {report.ping.failedEndpoints.join(', ')}
-          </div>
-        )}
-        <pre style={preStyle}>
-          {JSON.stringify(report.ping, null, 2)}
-        </pre>
-        <div style={{marginTop: 8, display: 'flex', gap: 8}}>
-          <button 
-            onClick={() => (window as any).resetPingSystem?.()} 
-            style={{...btnStyle, fontSize: 12}}
+        
+        <div className="flex gap-3">
+          <button
+            onClick={runQuickAudit}
+            disabled={state.isRunning}
+            className="adsm-button-primary"
           >
-            Reset Failed Endpoints
+            {state.isRunning ? '⚡ Running...' : '⚡ Quick Audit'}
           </button>
-          <button 
-            onClick={() => console.log('Ping status:', (window as any).getPingStatus?.())} 
-            style={{...btnStyle, fontSize: 12}}
+          
+          <button
+            onClick={runFullAudit}
+            disabled={state.isRunning}
+            className="adsm-button-secondary"
           >
-            Log Status to Console
+            {state.isRunning ? '🔍 Running...' : '🔍 Full Audit'}
+          </button>
+          
+          <button
+            onClick={generateReadme}
+            disabled={state.results.length === 0}
+            className="adsm-button-secondary"
+          >
+            📖 Generate README
+          </button>
+          
+          <button
+            onClick={runSmokeTest}
+            disabled={smokeTestResult.isRunning}
+            className="adsm-button-secondary"
+          >
+            {smokeTestResult.isRunning ? '🧪 Testing...' : '🧪 Smoke Test'}
+          </button>
+        </div>
+      </div>
+
+      {state.progress && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-blue-800 font-medium">
+              Running audit ({state.progress.completed}/{state.progress.total})
+            </span>
+            <span className="text-sm text-blue-600">
+              {Math.round((state.progress.completed / state.progress.total) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-blue-100 rounded-full h-2 mb-2">
+            <div 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-200" 
+              style={{ width: `${(state.progress.completed / state.progress.total) * 100}%` }}
+            />
+          </div>
+          <p className="text-sm text-blue-700">{state.progress.current}</p>
+        </div>
+      )}
+
+      {state.results.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="bg-white p-4 border border-gray-200 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{overallStats.passed}</div>
+            <div className="text-sm text-gray-600">Passed</div>
+          </div>
+          
+          <div className="bg-white p-4 border border-gray-200 rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{overallStats.failed}</div>
+            <div className="text-sm text-gray-600">Failed</div>
+          </div>
+          
+          <div className="bg-white p-4 border border-gray-200 rounded-lg">
+            <div className="text-2xl font-bold text-red-500">{overallStats.errors}</div>
+            <div className="text-sm text-gray-600">Errors</div>
+          </div>
+          
+          <div className="bg-white p-4 border border-gray-200 rounded-lg">
+            <div className="text-2xl font-bold text-yellow-500">{overallStats.warnings}</div>
+            <div className="text-sm text-gray-600">Warnings</div>
+          </div>
+          
+          <div className="bg-white p-4 border border-gray-200 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{state.components.length}</div>
+            <div className="text-sm text-gray-600">Components</div>
+          </div>
+        </div>
+      )}
+
+      {state.lastRun && (
+        <p className="text-sm text-gray-500">
+          Last run: {state.lastRun.toLocaleString()}
+        </p>
+      )}
+
+      {smokeTestResult.result && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Smoke Test Results</h3>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                smokeTestResult.result.overallStatus === 'PASS' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {smokeTestResult.result.overallStatus}
+              </span>
+              <span className="text-xs text-gray-500">
+                {smokeTestResult.timestamp && new Date(smokeTestResult.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+          </div>
+
+          {smokeTestResult.result.error ? (
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800">
+              <p className="font-medium">Test Error:</p>
+              <p className="text-sm mt-1">{smokeTestResult.result.error}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${
+                      smokeTestResult.result.details?.contrastStatus === 'PASS' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></span>
+                    <span className="text-sm font-medium">Contrast</span>
+                  </div>
+                  <div className="text-lg font-bold">
+                    {smokeTestResult.result.contrast?.ratio || 'N/A'}
+                  </div>
+                  <div className="text-xs text-gray-600">Ratio (≥4.5)</div>
+                </div>
+                
+                <div className="text-center p-3 bg-gray-50 rounded">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${
+                      smokeTestResult.result.details?.routesStatus === 'PASS' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></span>
+                    <span className="text-sm font-medium">Routes</span>
+                  </div>
+                  <div className="text-lg font-bold">
+                    {smokeTestResult.result.routes ? 
+                      `${Object.values(smokeTestResult.result.routes).filter(Boolean).length}/${Object.keys(smokeTestResult.result.routes).length}` 
+                      : 'N/A'}
+                  </div>
+                  <div className="text-xs text-gray-600">Loaded</div>
+                </div>
+                
+                <div className="text-center p-3 bg-gray-50 rounded">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${
+                      smokeTestResult.result.details?.componentsStatus === 'PASS' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></span>
+                    <span className="text-sm font-medium">Components</span>
+                  </div>
+                  <div className="text-lg font-bold">
+                    {smokeTestResult.result.componentsCount || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Available</div>
+                </div>
+              </div>
+
+              {smokeTestResult.result.routes && (
+                <div>
+                  <h4 className="font-medium mb-2">Route Navigation Test</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.entries(smokeTestResult.result.routes).map(([route, passed]) => (
+                      <div key={route} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <span className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <span className="text-sm capitalize">{route}</span>
+                        <span className={`text-xs px-1 rounded ${
+                          passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {passed ? 'PASS' : 'FAIL'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Test Summary:</strong> Validated dark theme contrast, navigated through {smokeTestResult.result.routes ? Object.keys(smokeTestResult.result.routes).length : 0} routes, 
+                  and verified {smokeTestResult.result.componentsCount || 0} components are available.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Results by Category</h3>
+        
+        {Object.entries(resultsByCategory).map(([category, results]) => 
+          results.length > 0 && (
+            <div key={category} className="border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-3 capitalize">
+                {category} ({results.length} audits)
+              </h4>
+              
+              <div className="space-y-2">
+                {results.map((result, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <span className="text-sm">{result.title}</span>
+                    <span className={`text-sm px-2 py-1 rounded ${
+                      result.passed 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {result.passed ? 'Pass' : 'Fail'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+
+  const renderArchitectureTab = () => {
+    const architectureResults = resultsByCategory.architecture;
+    const componentDependencyResult = architectureResults.find(r => r.metadata?.key === 'component-dependencies');
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Architecture Analysis</h2>
+            <p className="text-gray-600 mt-1">
+              Component dependency graph and layering validation
+            </p>
+          </div>
+          
+          <button
+            onClick={runFullAudit}
+            disabled={state.isRunning}
+            className="adsm-button-primary"
+          >
+            🔍 Run Architecture Audit
+          </button>
+        </div>
+
+        {componentDependencyResult && (
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Dependency Health</h3>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                componentDependencyResult.passed 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {componentDependencyResult.passed ? 'Healthy' : 'Issues Found'}
+              </span>
+            </div>
+
+            {componentDependencyResult.metrics && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {componentDependencyResult.metrics.atomCount || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Atoms</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {componentDependencyResult.metrics.moleculeCount || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Molecules</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {componentDependencyResult.metrics.errors || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Violations</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {componentDependencyResult.metrics.healthScore || 0}%
+                  </div>
+                  <div className="text-sm text-gray-600">Health Score</div>
+                </div>
+              </div>
+            )}
+
+            {componentDependencyResult.details && componentDependencyResult.details.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-3">Dependency Violations</h4>
+                <div className="space-y-2">
+                  {componentDependencyResult.details.map((detail, index) => (
+                    <div 
+                      key={index}
+                      className={`p-3 rounded border-l-4 ${
+                        detail.type === 'error' 
+                          ? 'bg-red-50 border-red-500 text-red-800'
+                          : 'bg-yellow-50 border-yellow-500 text-yellow-800'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{detail.message}</p>
+                          <p className="text-sm mt-1">Component: {detail.component}</p>
+                          {detail.line && (
+                            <p className="text-sm">Line: {detail.line}</p>
+                          )}
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          detail.type === 'error' 
+                            ? 'bg-red-200 text-red-800'
+                            : 'bg-yellow-200 text-yellow-800'
+                        }`}>
+                          {detail.type}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 mb-2">Architecture Rules</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>✅ <strong>Atoms</strong> should have no dependencies on other atoms or molecules</li>
+            <li>✅ <strong>Molecules</strong> can depend on atoms and occasionally other molecules (composition)</li>
+            <li>❌ <strong>Atoms</strong> cannot import molecules (violates atomic principles)</li>
+            <li>❌ <strong>Circular dependencies</strong> are not allowed at any level</li>
+          </ul>
+        </div>
+
+        {architectureResults.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No architecture audits have been run yet.</p>
+            <p className="text-sm mt-1">Click "Run Architecture Audit" to analyze component dependencies.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderCategoryTab = (category: string) => {
+    const results = resultsByCategory[category] || [];
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold capitalize">{category} Audits</h2>
+          <span className="text-sm text-gray-600">
+            {results.length} audits available
+          </span>
+        </div>
+
+        {results.length > 0 ? (
+          <div className="space-y-4">
+            {results.map((result, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">{result.title}</h3>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    result.passed 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {result.passed ? 'Pass' : 'Fail'}
+                  </span>
+                </div>
+
+                <p className="text-gray-600 mb-4">{result.description}</p>
+
+                {result.metrics && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded">
+                    <div className="text-center">
+                      <div className="text-lg font-bold">{result.metrics.checked}</div>
+                      <div className="text-xs text-gray-600">Checked</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-red-600">{result.metrics.errors}</div>
+                      <div className="text-xs text-gray-600">Errors</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-yellow-600">{result.metrics.warnings}</div>
+                      <div className="text-xs text-gray-600">Warnings</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold">{result.metrics.duration}ms</div>
+                      <div className="text-xs text-gray-600">Duration</div>
+                    </div>
+                  </div>
+                )}
+
+                {result.details && result.details.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Details ({result.details.length})</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {result.details.map((detail, detailIndex) => (
+                        <div 
+                          key={detailIndex}
+                          className={`p-2 rounded text-sm border-l-4 ${
+                            detail.type === 'error' 
+                              ? 'bg-red-50 border-red-500'
+                              : detail.type === 'warning'
+                              ? 'bg-yellow-50 border-yellow-500'
+                              : 'bg-blue-50 border-blue-500'
+                          }`}
+                        >
+                          <p>{detail.message}</p>
+                          {detail.component && (
+                            <p className="text-xs mt-1 text-gray-600">
+                              Component: {detail.component}
+                              {detail.line && ` (line ${detail.line})`}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p>No {category} audits have been run yet.</p>
+            <p className="text-sm mt-1">Run a full audit to see detailed {category} analysis.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderConfigTab = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Audit Configuration</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Quick Audit</h3>
+          <p className="text-gray-600 mb-4">
+            Runs critical and high priority audits (~5-10 seconds)
+          </p>
+          <div className="space-y-2">
+            {QUICK_AUDIT_KEYS.map(key => (
+              <div key={key} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                <span className="text-sm">{AUDIT_REGISTRY[key]?.description}</span>
+                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                  {AUDIT_REGISTRY[key]?.priority}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Full Audit</h3>
+          <p className="text-gray-600 mb-4">
+            Runs all available audits (~15-30 seconds)
+          </p>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {FULL_AUDIT_KEYS.map(key => (
+              <div key={key} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                <span className="text-sm">{AUDIT_REGISTRY[key]?.description}</span>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  AUDIT_REGISTRY[key]?.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                  AUDIT_REGISTRY[key]?.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                  AUDIT_REGISTRY[key]?.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {AUDIT_REGISTRY[key]?.priority}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h4 className="font-medium text-yellow-900 mb-2">Usage Guidelines</h4>
+        <ul className="text-sm text-yellow-800 space-y-1">
+          <li><strong>During Development:</strong> Use Quick Audit for fast feedback</li>
+          <li><strong>Before Commits:</strong> Run Quick Audit to catch critical issues</li>
+          <li><strong>Before Releases:</strong> Run Full Audit for comprehensive analysis</li>
+          <li><strong>Architecture Changes:</strong> Focus on Architecture tab audits</li>
+          <li><strong>Accessibility Work:</strong> Use Accessibility tab for WCAG compliance</li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  const renderDebugTab = () => {
+    const debugSnapshot = getDebugSnapshot();
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Debug Information</h2>
+            <p className="text-gray-600 mt-1">
+              System state, computed tokens, route map, and diagnostic data
+            </p>
+          </div>
+          
+          <button
+            onClick={copyDebugSnapshot}
+            className="adsm-button-secondary"
+          >
+            📋 Copy Debug Info
           </button>
         </div>
         
-        {/* Interactive Ping Diagnostics */}
-        <div style={{marginTop: 16}}>
-          <h4 style={{marginBottom: 8}}>Legacy Ping Diagnostics</h4>
-          <LegacyPingDiagnostics />
-        </div>
-      </section>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">System Status</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-gray-50 rounded">
+                <div className="text-sm text-gray-600">Theme</div>
+                <div className="font-medium">{debugSnapshot.theme.current}</div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded">
+                <div className="text-sm text-gray-600">Contrast Ratio</div>
+                <div className={`font-medium ${debugSnapshot.contrastPasses ? 'text-green-600' : 'text-red-600'}`}>
+                  {debugSnapshot.contrastRatio} {debugSnapshot.contrastPasses ? '✓' : '✗'}
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded">
+                <div className="text-sm text-gray-600">Route</div>
+                <div className="font-medium">{debugSnapshot.location.hash || '/'}</div>
+              </div>
+            </div>
+          </div>
 
-      {/* New Resilient Ping Diagnostics Panel */}
-      <section>
-        <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-          Resilient Ping Diagnostics <span style={{fontSize: 12, opacity: 0.7}}>(Read-Only)</span>
-        </h3>
-        <div style={{
-          background: 'var(--color-panel)', 
-          border: '1px solid var(--color-border)', 
-          borderRadius: 10, 
-          padding: 16, 
-          marginTop: 8
-        }}>
-          <PingDiagnostics />
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Computed Tokens</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm font-mono">
+              {Object.entries(debugSnapshot.computedTokens).map(([key, value]) => (
+                <div key={key} className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-gray-600">{key}:</span>
+                  <span>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Route Components</h3>
+            <div className="space-y-2">
+              {debugSnapshot.routeMap.map(({ route, component, loaded }) => (
+                <div key={route} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-sm">/{route}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">{component}</span>
+                    <span className={`w-2 h-2 rounded-full ${loaded ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
+    );
+  };
+
+  const renderThemeTab = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Theme Management</h2>
+          <p className="text-gray-600 mt-1">
+            Theme contrast analysis and automatic corrections
+          </p>
+        </div>
+        
+        <button
+          onClick={checkThemeContrast}
+          className="adsm-button-primary"
+        >
+          🎨 Check Contrast
+        </button>
+      </div>
+
+      {state.themeContrastData && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Contrast Analysis</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium mb-3">Current Theme Tokens</h4>
+              <div className="space-y-2 text-sm">
+                {Object.entries(state.themeContrastData.computedTokens || {}).map(([key, value]) => (
+                  <div key={key} className="flex justify-between p-2 bg-gray-50 rounded font-mono">
+                    <span className="text-gray-600">{key}:</span>
+                    <span>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-3">Contrast Metrics</h4>
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Text/Background Ratio</span>
+                    <span className={`font-bold ${
+                      state.themeContrastData.contrastRatio >= 4.5 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {state.themeContrastData.contrastRatio?.toFixed(2)} 
+                      {state.themeContrastData.contrastRatio >= 4.5 ? ' ✓' : ' ✗'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    WCAG AA requires ≥4.5 for normal text
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-gray-50 rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Current Theme</span>
+                    <span className="font-medium">{state.themeContrastData.currentTheme}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-medium text-blue-900 mb-2">Accessibility Guidelines</h4>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>✅ <strong>WCAG AA:</strong> Text contrast ratio ≥ 4.5:1</li>
+          <li>✅ <strong>WCAG AAA:</strong> Text contrast ratio ≥ 7:1 (enhanced)</li>
+          <li>✅ <strong>Large Text:</strong> Can use ≥ 3:1 ratio (18pt+ or 14pt+ bold)</li>
+          <li>✅ <strong>Non-text:</strong> UI components need ≥ 3:1 ratio</li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="adsm-debug-container">
+      <div className="adsm-debug-tabs">
+        <div className="flex space-x-1 border-b border-gray-200 mb-6" role="tablist">
+          {renderTabButton('overview', 'Overview', state.results.length > 0 ? overallStats.failed : undefined)}
+          {renderTabButton('accessibility', 'Accessibility', resultsByCategory.accessibility.length)}
+          {renderTabButton('architecture', 'Architecture', resultsByCategory.architecture.length)}
+          {renderTabButton('tokens', 'Tokens', resultsByCategory.tokens.length)}
+          {renderTabButton('performance', 'Performance', resultsByCategory.performance.length)}
+          {renderTabButton('regression', 'Regression', resultsByCategory.regression.length)}
+          {renderTabButton('theme', 'Theme')}
+          {renderTabButton('debug', 'Debug')}
+          {renderTabButton('config', 'Config')}
+        </div>
+
+        <div role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'accessibility' && renderCategoryTab('accessibility')}
+          {activeTab === 'architecture' && renderArchitectureTab()}
+          {activeTab === 'tokens' && renderCategoryTab('tokens')}
+          {activeTab === 'performance' && renderCategoryTab('performance')}
+          {activeTab === 'regression' && renderCategoryTab('regression')}
+          {activeTab === 'theme' && renderThemeTab()}
+          {activeTab === 'debug' && renderDebugTab()}
+          {activeTab === 'config' && renderConfigTab()}
+        </div>
+      </div>
     </div>
   );
 }

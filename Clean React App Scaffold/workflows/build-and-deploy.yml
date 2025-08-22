@@ -1,0 +1,312 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  TARGET_REPO: 'ProPar-Dave/Design-System'
+  TARGET_PATH: 'dist'
+
+jobs:
+  build:
+    name: Build Artifacts
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.package-version.outputs.version }}
+      commit-sha: ${{ steps.commit-info.outputs.sha }}
+      
+    steps:
+      - name: 📚 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build project
+        run: |
+          echo "Building Atomic DS Manager..."
+          npm run build
+          
+      - name: 🔧 Generate additional artifacts
+        run: |
+          echo "Generating distribution artifacts..."
+          node scripts/build.js
+          
+      - name: 📋 Extract package version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📌 Package version: $VERSION"
+          
+      - name: 🔍 Extract commit info  
+        id: commit-info
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "📌 Commit SHA: $SHA"
+
+      - name: ✅ Verify build artifacts
+        run: |
+          echo "🔍 Verifying required artifacts exist..."
+          
+          REQUIRED_FILES=(
+            "dist/index.js"
+            "dist/adsm.css" 
+            "dist/tokens.json"
+            "dist/catalog.json"
+            "catalog.json"
+            "tokens.json"
+          )
+          
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "unknown")
+              echo "✅ $file ($SIZE bytes)"
+            else
+              echo "❌ Missing required file: $file"
+              exit 1
+            fi
+          done
+          
+          echo ""
+          echo "📊 Build summary:"
+          echo "   • ESM bundle: $(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js) bytes"
+          echo "   • CSS bundle: $(stat -f%z dist/adsm.css 2>/dev/null || stat -c%s dist/adsm.css) bytes"  
+          echo "   • Tokens: $(stat -f%z dist/tokens.json 2>/dev/null || stat -c%s dist/tokens.json) bytes"
+          echo "   • Catalog: $(stat -f%z dist/catalog.json 2>/dev/null || stat -c%s dist/catalog.json) bytes"
+
+      - name: 📊 Analyze bundle size
+        run: |
+          echo "📈 Bundle analysis:"
+          if command -v ls &> /dev/null; then
+            ls -la dist/
+          fi
+          
+          if [ -f "dist/index.js" ]; then
+            echo ""
+            echo "🔍 ESM bundle analysis:"
+            wc -l dist/index.js | awk '{print "   Lines: " $1}'
+            echo "   Size: $(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js) bytes"
+          fi
+
+      - name: 🧪 Test artifacts integrity
+        run: |
+          echo "🧪 Testing JSON artifacts..."
+          
+          # Test tokens.json
+          if ! jq empty dist/tokens.json; then
+            echo "❌ Invalid JSON in dist/tokens.json"
+            exit 1
+          else
+            echo "✅ dist/tokens.json is valid JSON"
+          fi
+          
+          # Test catalog.json  
+          if ! jq empty dist/catalog.json; then
+            echo "❌ Invalid JSON in dist/catalog.json"
+            exit 1
+          else
+            echo "✅ dist/catalog.json is valid JSON"
+            echo "   Components: $(jq '.components | length' dist/catalog.json)"
+            echo "   Categories: $(jq '.categories | length' dist/catalog.json)"
+          fi
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: adsm-build-artifacts-${{ steps.commit-info.outputs.sha }}
+          path: |
+            dist/
+            catalog.json
+            tokens.json
+          retention-days: 30
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy to Target Repository
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: adsm-build-artifacts-${{ needs.build.outputs.commit-sha }}
+          path: ./artifacts
+
+      - name: 🔍 Verify downloaded artifacts
+        run: |
+          echo "🔍 Verifying downloaded artifacts..."
+          ls -la artifacts/
+          
+          if [ -d "artifacts/dist" ]; then
+            echo "📁 dist/ contents:"
+            ls -la artifacts/dist/
+          fi
+
+      - name: 🔧 Setup deployment
+        run: |
+          echo "🔧 Setting up deployment environment..."
+          
+          # Create deployment directory structure
+          mkdir -p deployment/${{ env.TARGET_PATH }}
+          
+          # Copy artifacts to deployment directory
+          cp -r artifacts/dist/* deployment/${{ env.TARGET_PATH }}/
+          cp artifacts/catalog.json deployment/
+          cp artifacts/tokens.json deployment/
+          
+          # Create deployment manifest
+          cat > deployment/manifest.json << EOF
+          {
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "version": "${{ needs.build.outputs.version }}",
+            "commit": "${{ needs.build.outputs.commit-sha }}",
+            "source": {
+              "repository": "${{ github.repository }}",
+              "branch": "${{ github.ref_name }}",
+              "workflow": "${{ github.workflow }}",
+              "runId": "${{ github.run_id }}"
+            },
+            "artifacts": {
+              "esmBundle": "${{ env.TARGET_PATH }}/index.js",
+              "cssBundle": "${{ env.TARGET_PATH }}/adsm.css", 
+              "tokens": "tokens.json",
+              "catalog": "catalog.json"
+            }
+          }
+          EOF
+          
+          echo "📋 Deployment manifest:"
+          cat deployment/manifest.json
+
+      - name: 🚀 Deploy via GitHub API (PAT Method)
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_PAT || secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ env.TARGET_REPO }}
+        run: |
+          echo "🚀 Deploying to $TARGET_REPO..."
+          
+          # Check if we have a deployment token
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ No deployment token available. Skipping deployment."
+            echo "💡 Add a DEPLOY_PAT secret with repo permissions to enable deployment."
+            exit 0
+          fi
+          
+          # Create a script for deployment
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          TARGET_REPO="${{ env.TARGET_REPO }}"
+          TARGET_PATH="${{ env.TARGET_PATH }}"
+          COMMIT_SHA="${{ needs.build.outputs.commit-sha }}"
+          VERSION="${{ needs.build.outputs.version }}"
+          
+          echo "📡 Deploying to $TARGET_REPO/$TARGET_PATH"
+          
+          # Clone target repository
+          git clone "https://$GITHUB_TOKEN@github.com/$TARGET_REPO.git" target-repo
+          cd target-repo
+          
+          # Configure git
+          git config user.name "Atomic DS Manager Bot"
+          git config user.email "action@github.com"
+          
+          # Create target directory if it doesn't exist
+          mkdir -p "$TARGET_PATH"
+          
+          # Copy all deployment files
+          cp -r ../deployment/* .
+          
+          # Stage changes
+          git add .
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "🔄 No changes detected, skipping deployment"
+            exit 0
+          fi
+          
+          # Commit and push
+          git commit -m "🚀 Deploy Atomic DS Manager v$VERSION
+
+          • Built from commit: $COMMIT_SHA
+          • Workflow: ${{ github.workflow }}
+          • Run ID: ${{ github.run_id }}
+          
+          Artifacts:
+          • ESM bundle: $TARGET_PATH/index.js
+          • CSS bundle: $TARGET_PATH/adsm.css
+          • Design tokens: tokens.json
+          • Component catalog: catalog.json"
+          
+          git push origin main
+          
+          echo "✅ Deployment completed successfully!"
+          EOF
+          
+          chmod +x deploy.sh
+          ./deploy.sh
+
+      - name: 📝 Deployment summary
+        if: success()
+        run: |
+          echo "## 🎉 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Repository:** \`${{ env.TARGET_REPO }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.build.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY  
+          echo "**Commit:** \`${{ needs.build.outputs.commit-sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Deployed Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Path | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`index.js\` | \`${{ env.TARGET_PATH }}/index.js\` | ESM bundle for consumption |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`adsm.css\` | \`${{ env.TARGET_PATH }}/adsm.css\` | Extracted styles |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`tokens.json\` | \`tokens.json\` | Design system tokens |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`catalog.json\` | \`catalog.json\` | Component catalog |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`manifest.json\` | \`manifest.json\` | Deployment metadata |" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📢 Build Status Notification
+        run: |
+          BUILD_STATUS="${{ needs.build.result }}"
+          DEPLOY_STATUS="${{ needs.deploy.result }}"
+          
+          echo "📊 Pipeline Status:"
+          echo "   Build: $BUILD_STATUS"
+          echo "   Deploy: $DEPLOY_STATUS"
+          
+          if [ "$BUILD_STATUS" = "success" ] && [ "$DEPLOY_STATUS" = "success" ]; then
+            echo "🎉 Full pipeline completed successfully!"
+          elif [ "$BUILD_STATUS" = "success" ]; then
+            echo "⚠️ Build succeeded but deployment had issues"
+          else
+            echo "❌ Pipeline failed during build phase"
+          fi
+          
+          echo "🔗 Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

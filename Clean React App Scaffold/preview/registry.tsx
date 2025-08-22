@@ -148,6 +148,9 @@ const UI = {
   ),
 };
 
+// Import the MoleculeSeedDemo component
+import { MoleculeSeedDemo } from '../components/MoleculeSeedDemo';
+
 // Component registry with schemas and renderers
 export const registry: Record<string, RegistryEntry> = {
   btn: {
@@ -256,6 +259,12 @@ export const registry: Record<string, RegistryEntry> = {
     },
     defaults: { label: 'Email Address', help: 'We will never share your email.', invalid: false },
     render: (props) => <UI.FormRow {...props} />,
+  },
+
+  'molecule-seed-demo': {
+    schema: {},
+    defaults: {},
+    render: () => <MoleculeSeedDemo />,
   },
 };
 
