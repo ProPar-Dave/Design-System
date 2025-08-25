@@ -15,17 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"],
-      "@/components/*": ["./components/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/styles/*": ["./styles/*"],
-      "@/src/*": ["./src/*"],
-      "@/pages/*": ["./src/pages/*"],
-      "@/router/*": ["./src/router/*"],
-      "@/src/utils/*": ["./src/utils/*"]
-    }
+    "baseUrl": "."
   },
   "include": [
     "**/*.ts",

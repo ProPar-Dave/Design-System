@@ -4,7 +4,8 @@
 @import './tokens/core.css';
 @import './tokens/light-theme.css';
 @import './tokens/dark-theme.css';
-@import './tokens/components.css';
+/* Ensure the nav CSS is included after tokens so it resolves custom properties */
+@import '../src/styles/nav.css';
 
 /* IMPORTANT: Theme tokens are applied via themeManager.ts for deterministic behavior */
 /* The CSS files above provide fallbacks but will be overridden by inline styles */

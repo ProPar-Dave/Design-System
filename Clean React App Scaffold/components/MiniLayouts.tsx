@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import devLog from '../src/utils/devLog';
 import { Card } from './molecules/Card';
 import { FormGroup } from './molecules/FormGroup';
 import { FieldRow } from './molecules/FieldRow';
@@ -15,6 +16,7 @@ import { Badge } from './atoms/Badge';
 import { auditLayout, exportAuditResults, type LayoutAuditResult } from '../utils/layoutAudit';
 
 function MiniLayouts() {
+  devLog('[MiniLayouts] mounted');
   const [auditResults, setAuditResults] = useState<LayoutAuditResult[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [formData, setFormData] = useState({

@@ -1,6 +1,6 @@
 import React from 'react';
 import { loadCatalog } from '../catalog/loader';
-import { openDrawer } from '../drawer/controller';
+import { open } from '../drawer/DrawerController';
 
 export default function ComponentsCatalog() {
   const [items, setItems] = React.useState<any[] | null>(null);
@@ -96,7 +96,8 @@ export default function ComponentsCatalog() {
         {filtered.map(item => {
           const onActivate = (e: React.KeyboardEvent | React.MouseEvent) => {
             if ('key' in e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); }
-            openDrawer(item);
+            // Normalize to DrawerItem shape; ignore extra fields to avoid schema regressions
+            open({ id: item.id, name: item.name, level: item.level });
           };
           return (
           <article

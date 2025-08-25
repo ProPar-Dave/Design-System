@@ -105,12 +105,4 @@ export function PreviewPanel({ component }: { component: ComponentDef }) {
   );
 }
 
-// Keep the old function for backward compatibility if needed elsewhere
-export function PreviewPanelLegacy({ item }: { item: DsComponent }) {
-  const node = registry[item.id];
-  return (
-    <div className="preview-frame">
-      {node || <div className="empty">No preview available.</div>}
-    </div>
-  );
-}
+// Note: Legacy implementation removed. PreviewPanel is the single source of truth.

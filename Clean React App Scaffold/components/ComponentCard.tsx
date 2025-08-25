@@ -1,6 +1,6 @@
 // src/components/ComponentCard.tsx
 import * as React from 'react';
-import { openDrawer } from '../src/drawer/controller';
+import { open } from '../src/drawer/DrawerController';
 
 type Item = { 
   id: string; 
@@ -22,10 +22,10 @@ export default function ComponentCard({
     }));
     
     // Open drawer via controller
-    openDrawer({
+    open({
       id: item.id,
       name: item.name,
-      level: item.level as 'atom' | 'molecule' | 'organism',
+      level: item.level,
       status: item.status,
       description: item.description
     });

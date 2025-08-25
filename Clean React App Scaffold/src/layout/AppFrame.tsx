@@ -1,41 +1,22 @@
-import React, { Suspense } from 'react';
-import '../styles/presentation.css';
+import React from 'react';
+import '../styles/nav.css'; // ensure nav styles are loaded
 
-interface AppFrameProps {
+type Props = {
   children: React.ReactNode;
-  isDebugMode?: boolean;
-  className?: string;
-}
+  theme?: 'light' | 'dark';
+};
 
-export function AppFrame({ children, isDebugMode = false, className = '' }: AppFrameProps) {
+export default function AppFrame({ children, theme }: Props) {
+  // Keep a stable, top-level wrapper so tokens & theme apply everywhere.
+  // The className "adsm-ui" provides the namespace and the data-theme drives tokens.
+  const currentTheme = theme ?? (document.documentElement.dataset.theme as
+    | 'light'
+    | 'dark'
+    | undefined) ?? 'dark';
+
   return (
-    <div 
-      id="adsm-root"
-      className={`adsm-app-frame adsm-ui ${className}`}
-      role="application"
-      aria-label="Atomic Design System Manager"
-    >
-      <div className="adsm-app-content">
-        <Suspense fallback={
-          <div 
-            className="adsm-loading-fallback"
-            role="status"
-            aria-live="polite"
-          >
-            Loading application…
-          </div>
-        }>
-          {children}
-        </Suspense>
-      </div>
-      
-      {isDebugMode && (
-        <div className="adsm-debug-overlay">
-          <div className="adsm-debug-indicator">
-            DEV MODE
-          </div>
-        </div>
-      )}
+    <div className="adsm-ui app" data-theme={currentTheme}>
+      {children}
     </div>
   );
 }

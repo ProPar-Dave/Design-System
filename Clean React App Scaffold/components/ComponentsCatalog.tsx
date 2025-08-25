@@ -1,4 +1,5 @@
 import React from 'react';
+import devLog from '../src/utils/devLog';
 import { ComponentsGrid } from './ComponentsGrid';
 import { NewComponentWizard } from './NewComponentWizard';
 import { useCatalogState } from '../store/catalogStore';
@@ -14,8 +15,8 @@ import {
 import { parseHash, updateHash, navigateTo } from '../utils/router';
 import { pingComponentOperation } from '../utils/ping';
 import { safeLogEvent } from '../diagnostics/logger';
-import { openDrawer } from '../src/drawer/controller';
-import type { DrawerItem } from '../src/drawer/controller';
+import { open } from '../src/drawer/DrawerController';
+import type { DrawerItem } from '../src/drawer';
 import '../styles/components.css';
 
 interface ComponentsCatalogProps {
@@ -61,24 +62,24 @@ export default function ComponentsCatalog({ selectedId }: ComponentsCatalogProps
   }, [catalog]);
 
   // Handle component selection using the new drawer controller
-  const handleItemClick = React.useCallback((componentId: string, buttonRef?: HTMLElement) => {
-    console.log('ComponentsCatalog: Opening drawer for component:', componentId);
+  const handleItemClick = React.useCallback((componentId: string) => {
+    devLog('ComponentsCatalog: Opening drawer for component:', componentId);
     
     // Find the full component to validate it exists
     const component = validatedCatalog.find(c => c.id === componentId);
     if (!component) {
-      console.error('ComponentsCatalog: Component not found in catalog:', componentId);
+      devLog('ComponentsCatalog: Component not found in catalog:', componentId);
       return;
     }
     
-    console.log('ComponentsCatalog: Opening drawer with component:', {
+    devLog('ComponentsCatalog: Opening drawer with component:', {
       id: component.id,
       name: component.name,
       level: component.level,
       status: component.status
     });
     
-    // Convert DsComponent to DrawerItem and open drawer
+    // Minimal, sanitized DrawerItem required by drawer controller
     const drawerItem: DrawerItem = {
       id: component.id,
       name: component.name,
@@ -86,12 +87,10 @@ export default function ComponentsCatalog({ selectedId }: ComponentsCatalogProps
       status: component.status,
       version: component.version,
       description: component.description,
-      // Pass through all other properties
-      ...component
     };
     
-    // Open drawer only - no app reboot
-    openDrawer(drawerItem);
+    // Open drawer (no global re-init)
+    open(drawerItem);
     // Optional: update hash for deep linking
     window.location.hash = `#/components?id=${componentId}&tab=preview`;
   }, [validatedCatalog]);

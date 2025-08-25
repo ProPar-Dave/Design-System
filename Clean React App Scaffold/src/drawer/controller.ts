@@ -1,44 +1,38 @@
-import * as React from 'react';
+// Legacy controller file - DEPRECATED
+// Use DrawerController.ts instead
+// This file is kept temporarily for backward compatibility
 
-export type DrawerItem = {
-  id: string; 
-  name: string; 
-  level: 'atom'|'molecule'|'organism';
-  status?: string; 
-  version?: string; 
-  description?: string;
-  [k: string]: any;
-};
+import { open, close, subscribe, getCurrent, type DrawerItem } from './DrawerController';
 
-type State = { open: boolean; item?: DrawerItem | null };
+// Legacy API compatibility layer
+export type { DrawerItem };
 
-let subscribers: Array<(s:State)=>void> = [];
-let state: State = { open: false, item: null };
+type LegacyState = { open: boolean; item?: DrawerItem | null };
 
-export function getDrawerState(){ return state; }
-export function subscribe(fn:(s:State)=>void){ 
-  subscribers.push(fn); 
-  return ()=>{ 
-    subscribers = subscribers.filter(f=>f!==fn); 
-  }; 
+export function getDrawerState(): LegacyState { 
+  const current = getCurrent();
+  return { open: !!current, item: current };
 }
 
-function emit(){ 
-  subscribers.forEach(fn=>fn(state)); 
+export function openDrawer(item: DrawerItem) {
+  console.warn('[DEPRECATED] openDrawer is deprecated. Use open() from DrawerController instead.');
+  open(item);
 }
 
-export function openDrawer(item: DrawerItem){
-  state = { open: true, item };
-  document.documentElement.classList.add('adsm-drawer-open');
-  emit();
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Drawer] open', {id:item?.id, name:item?.name});
-  }
+export function closeDrawer() {
+  console.warn('[DEPRECATED] closeDrawer is deprecated. Use close() from DrawerController instead.');
+  close();
 }
 
-export function closeDrawer(){
-  state = { open: false, item: null };
-  document.documentElement.classList.remove('adsm-drawer-open');
-  emit();
-  if (process.env.NODE_ENV !== 'production') console.log('[Drawer] close');
+// Legacy subscribe wrapper that adapts new API to old API
+export function subscribe(fn: (s: LegacyState) => void) {
+  console.warn('[DEPRECATED] Legacy subscribe API is deprecated. Use new API from DrawerController instead.');
+  
+  return subscribe((newState) => {
+    const legacyState: LegacyState = {
+      open: !!newState.current,
+      item: newState.current
+    };
+    fn(legacyState);
+  });
 }

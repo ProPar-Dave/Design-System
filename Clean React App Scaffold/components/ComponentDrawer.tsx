@@ -11,7 +11,8 @@ import { useThumbCapture } from '../utils/snapshot';
 import { auditDrawerContrast, applyContrastFallbacks, captureDrawerScreenshot, getHighContrastTokens, getCurrentTheme } from '../diagnostics/utils';
 import { safeLogEvent } from '../diagnostics/logger';
 import '../styles/preview.css';
-import '../styles/drawer.css';
+// Normalize to a single drawer stylesheet to avoid dupe or missing imports.
+import '../src/styles/drawer.css';
 
 export type DrawerTab = 'preview' | 'notes' | 'props' | 'json';
 

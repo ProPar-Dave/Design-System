@@ -19,8 +19,13 @@ export function startRouter(onChange: (route:string)=>void) {
     onChange(r);
     dispatchEvent(new CustomEvent('adsm:route-change', { detail: { route: r }}));
   };
+  const onDrawer = () => handler(); // keep URL-derived ID in sync
   addEventListener('hashchange', handler);
+  addEventListener('adsm:drawer:open', onDrawer as any);
   // initial
   if (!location.hash) navigateTo('overview'); else handler();
-  return () => removeEventListener('hashchange', handler);
+  return () => {
+    removeEventListener('hashchange', handler);
+    removeEventListener('adsm:drawer:open', onDrawer as any);
+  };
 }

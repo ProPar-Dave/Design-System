@@ -1,9 +1,10 @@
 // src/utils/tokenUtils.ts
-// Single source of truth for reading/writing design tokens with live CSS updates and persistence
+// Authoritative token helpers live here (single source of truth).
 
 const STORAGE_KEY = 'adsm:tokens:v1';
 
 export type TokenMap = Record<string, string>;
+export type TokenKV = Record<string, string>;
 
 const EL_SELECTOR = '.adsm-ui'; // root element that owns CSS vars (update if yours differs)
 
@@ -61,4 +62,23 @@ function normalizeColor(input: string): string {
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try { return JSON.parse(raw) as T; } catch { return null; }
+}
+
+export function toCssVars(tokens: TokenKV): string {
+  return Object.entries(tokens)
+    .map(([k, v]) => `--${k}: ${v};`)
+    .join('\n');
+}
+
+export function isHexLike(v: string): boolean {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
+}
+
+export function normalizeTokenValue(value: string): string {
+  const v = value.trim();
+  // Allow 'transparent' passthrough
+  if (v.toLowerCase() === 'transparent') return v;
+  // Ensure hex has leading '#'
+  if (/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) return `#${v}`;
+  return v;
 }

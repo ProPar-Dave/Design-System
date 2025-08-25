@@ -1,0 +1,9 @@
+/* Consolidated imports for src/styles directory */
+/* your tokens/globals imports first */
+@import './globals.css';           /* if you have one */
+@import './tokens.css';            /* if you have one */
+@import './drawer.css';            /* the drawer styles live here */
+@import './forms.css';
+@import './badges.css';
+@import './nav.css';
+@import './primitives.css';

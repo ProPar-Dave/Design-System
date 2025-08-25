@@ -1,32 +1,61 @@
-import React, { Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ensureThemeBoot } from './src/theme/themeManager';
 import { CommandPalette, useCommands } from './components/CommandPalette';
-import { Layout } from './components/Layout';
-import { Router } from './components/Router';
+import Layout from './components/Layout';
 import { ContrastWarning } from './components/ContrastWarning';
-import ComponentDrawer from './src/drawer/ComponentDrawer';
-import { AppFrame } from './src/layout/AppFrame';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import AppFrame from './src/layout/AppFrame';
 import { initializeApp } from './src/utils/initializeApp';
 import { handleInitializationError } from './utils/appInitialization';
 import { createCommandPaletteActions } from './utils/commandPaletteActions';
-import { initializeTheme, applySimpleTheme, getSimpleTheme } from './src/theme/themeManager';
+import { initializeTheme, applySimpleTheme, getSimpleTheme, ensureRootAttributes } from './src/theme/themeManager';
 import { bootTokens } from './utils/tokenUtils';
+import { devLog } from './src/utils/devLog';
+
+// Import pages
+import Overview from './components/Overview';
+import TokensPage from './components/TokensPage';
+import ComponentsCatalog from './src/pages/ComponentsCatalog';
+import MiniLayouts from './components/MiniLayouts';
+import Diagnostics from './src/pages/Diagnostics';
+import Releases from './components/Releases';
+
+// Import CSS files
 import './styles/preview.css';
 import './styles/command-palette.css';
-import './src/styles/forms.css';
-import './src/styles/badges.css';
-import './src/styles/nav.css';
-import './styles/drawer.css';
-import './src/styles/primitives.css';
+
+import './src/styles/index.css';
+
+// Minimal fallbacks for any missing pages
+const Fallback = ({ title }: { title: string }) => (
+  <div style={{ color: 'var(--color-text)', padding: '1rem' }}>
+    <h1>{title}</h1>
+    <p>This page is under development.</p>
+  </div>
+);
+
+const SafeOverview = Overview ?? (() => <Fallback title="Overview" />);
+const SafeTokens = TokensPage ?? (() => <Fallback title="Tokens" />);
+const SafeComponents = ComponentsCatalog ?? (() => <Fallback title="Components" />);
+const SafeLayouts = MiniLayouts ?? (() => <Fallback title="Mini Layouts" />);
+const SafeDiagnostics = Diagnostics ?? (() => <Fallback title="Diagnostics" />);
+const SafeReleases = Releases ?? (() => <Fallback title="Releases" />);
 
 export default function App() {
+  // Make sure attributes exist *before* the app renders anything
+  ensureRootAttributes(getSimpleTheme());
   const [currentTheme, setCurrentTheme] = React.useState(getSimpleTheme());
   const [booted, setBooted] = React.useState(false);
+  const [drawerError, setDrawerError] = React.useState<string | null>(null);
 
   // Boot sequence runs exactly once
   React.useEffect(() => {
     let timeout = setTimeout(() => setBooted(true), 4000); // safety
     (async () => {
       try {
+        // Ensure theme boot first
+        ensureThemeBoot();
         applySimpleTheme(getSimpleTheme());
         await initializeApp();
       } catch (err) {
@@ -57,6 +86,23 @@ export default function App() {
     const root = document.documentElement;
     root.setAttribute("data-theme", theme ?? "light");
     root.setAttribute("data-ns", "adsm-ui");
+
+    // Expose a tiny test hook for QA/manual verification (non-prod)
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      window.__adsm = Object.assign({}, window.__adsm, {
+        open: (id: string) => {
+          devLog('[App] Attempting to open drawer for:', id);
+          try {
+            const { open } = require('./src/drawer/DrawerController');
+            open({ id, name: id, level: 'atom' as const });
+          } catch (error) {
+            devLog('[App] ❌ Failed to open drawer:', error);
+            setDrawerError(`Failed to open drawer: ${error}`);
+          }
+        }
+      });
+    }
   }, []);
 
   // Listen for theme changes to update the data-theme attribute
@@ -190,25 +236,53 @@ export default function App() {
   const isDebugMode = !window.location.href.includes('vercel.app') && !window.location.href.includes('netlify.app');
 
   if (!booted) {
-    return <div className="app-boot-overlay">Loading application… DEV MODE</div>;
+    return <div className="app-boot-overlay">Loading application… DEBUG MODE</div>;
   }
 
   return (
-    <AppFrame 
-      isDebugMode={isDebugMode}
-      className={`app min-h-screen ${isDebugMode ? 'adsm-debug-container' : ''}`}
-    >
-      <Layout>
-        <Router />
-      </Layout>
-      <CommandPalette commands={commands} />
-      <ComponentDrawer />
-      
-      {isDebugMode && (
-        <div className="adsm-debug">
-          <ContrastWarning />
+    <HashRouter>
+      <AppFrame theme={currentTheme}>
+        <div className={`app min-h-screen ${isDebugMode ? 'adsm-debug-container' : ''}`}>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<SafeOverview />} />
+              <Route path="/overview" element={<SafeOverview />} />
+              <Route path="/tokens" element={<SafeTokens />} />
+              <Route path="/components" element={<SafeComponents />} />
+              <Route path="/mini-layouts" element={<SafeLayouts />} />
+              <Route path="/diagnostics" element={<SafeDiagnostics />} />
+              <Route path="/releases" element={<SafeReleases />} />
+              {/* keep users off 404 blank screens */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+          <CommandPalette commands={commands} />
+          
+          {isDebugMode && (
+            <div className="adsm-debug">
+              <ContrastWarning />
+              {drawerError && (
+                <div style={{
+                  position: 'fixed',
+                  bottom: '80px',
+                  right: '20px',
+                  padding: '0.75rem',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-text)',
+                  fontSize: '0.8rem',
+                  maxWidth: '300px',
+                  zIndex: 9998
+                }}>
+                  <strong>Drawer Error:</strong><br/>
+                  {drawerError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </AppFrame>
+      </AppFrame>
+    </HashRouter>
   );
 }

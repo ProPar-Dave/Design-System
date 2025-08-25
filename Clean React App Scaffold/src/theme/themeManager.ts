@@ -9,6 +9,21 @@ import { applyTokens, loadTokens } from '../utils/tokenUtils';
 export type ThemeName = 'light' | 'dark';
 export type ThemeType = 'light' | 'dark' | 'auto';
 
+/**
+ * Ensures the document carries the design-system namespace and a theme.
+ * We keep it tiny: *no* side effects besides attributes/class on <html>.
+ */
+export function ensureThemeBoot() {
+  const html = document.documentElement
+  // Namespace class the CSS depends on (adjust if your CSS expects another)
+  const NS = 'adsm-ui'
+  if (!html.classList.contains(NS)) html.classList.add(NS)
+
+  // Ensure data-theme for token scoping
+  const theme = html.getAttribute('data-theme')
+  if (!theme) html.setAttribute('data-theme', 'dark') // default
+}
+
 const KEY = 'adsm:theme';
 export function getSimpleTheme(): ThemeName {
   const t = (localStorage.getItem(KEY) as ThemeName) || 'dark';
@@ -40,6 +55,37 @@ function wcagContrast(f:string,b:string){
   const l = (r:number,g:number,b:number)=>{ const to=(v:number)=>{v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)}; const [R,G,B]=[to(r),to(g),to(b)]; return 0.2126*R+0.7152*G+0.0722*B; };
   const [r1,g1,b1]=p(f), [r2,g2,b2]=p(b); const L1=l(r1,g1,b1)+0.05, L2=l(r2,g2,b2)+0.05;
   return +(Math.max(L1,L2)/Math.min(L1,L2)).toFixed(2);
+}
+
+/**
+ * Ensure root attributes exist before React renders anything
+ * This prevents token resolution issues during initial render
+ */
+export function ensureRootAttributes(theme: ThemeName): void {
+  const root = document.documentElement;
+  
+  // Set theme attribute if not already set
+  if (!root.hasAttribute('data-theme')) {
+    root.setAttribute('data-theme', theme);
+  }
+  
+  // Set namespace attribute if not already set
+  if (!root.hasAttribute('data-ns')) {
+    root.setAttribute('data-ns', 'adsm-ui');
+  }
+  
+  // Ensure app root has proper namespace class for CSS targeting
+  const appRoot = document.getElementById('adsm-root') || document.querySelector('.adsm-ui');
+  if (appRoot && !appRoot.classList.contains('adsm-ui')) {
+    appRoot.classList.add('adsm-ui');
+  }
+  
+  devLog('Theme Manager: Root attributes ensured', {
+    theme: root.getAttribute('data-theme'),
+    namespace: root.getAttribute('data-ns'),
+    hasAppRoot: !!appRoot,
+    appRootClasses: appRoot?.classList.toString()
+  });
 }
 
 // Define explicit color tokens for each theme

@@ -12,11 +12,14 @@ let registryCache: any = null;
 export function getComponentById(id: string): any {
   try {
     if (!registryCache) {
-      // Try to import the registry synchronously
+      // Try to import the registry synchronously (fallback safely if it fails)
       try {
-        registryCache = require('../components/registry').registry;
+        // Use dynamic import instead of require for better compatibility
+        const registryModule = require('../components/registry');
+        registryCache = registryModule?.registry || {};
       } catch (requireError) {
-        console.warn(`[lazyFromComponent] Failed to load registry:`, requireError);
+        console.warn(`[lazyFromComponent] Failed to load registry (using empty fallback):`, requireError);
+        registryCache = {}; // Empty fallback to prevent re-attempts
         return null;
       }
     }

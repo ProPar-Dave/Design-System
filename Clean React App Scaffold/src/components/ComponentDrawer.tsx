@@ -31,13 +31,11 @@ export const ComponentDrawer = ({ component, onClose }: Props) => {
 
   return (
     <aside
-      className="
-        fixed top-0 right-0 h-full w-[480px]
-        border-l shadow-xl z-50 flex flex-col
-        bg-[var(--color-panel)] text-[var(--color-text)]
-        border-[var(--color-border)]
-      "
+      className="adsm-drawer"
       data-theme="panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adsm-drawer-title"
     >
       <div
         className="
@@ -57,13 +55,13 @@ export const ComponentDrawer = ({ component, onClose }: Props) => {
 
       <div className="flex-1 overflow-y-auto px-4 py-3">
         <Tabs>
-          <TabList className="flex space-x-2 border-b border-[var(--color-border)]">
-            <Tab className="px-3 py-1 text-sm data-[selected]:border-b-2 data-[selected]:border-[var(--color-accent)]">
+          <TabList className="adsm-drawer-tabs">
+            <Tab className="adsm-tab">
               Preview
             </Tab>
-            <Tab className="px-3 py-1 text-sm">Notes</Tab>
-            <Tab className="px-3 py-1 text-sm">Props</Tab>
-            <Tab className="px-3 py-1 text-sm">JSON</Tab>
+            <Tab className="adsm-tab">Notes</Tab>
+            <Tab className="adsm-tab">Props</Tab>
+            <Tab className="adsm-tab">JSON</Tab>
           </TabList>
 
           <TabPanels className="mt-3">
