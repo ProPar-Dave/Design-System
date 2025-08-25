@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { getCurrentRoute, startRouter } from '../src/router/index';
+import Sidebar from './Sidebar';
 
 // Import pages
 import Overview from './Overview';
@@ -58,3 +59,9 @@ export function Router() {
 
   return renderPage();
 }
+
+// Add static properties for the new structure
+Router.Sidebar = Sidebar;
+Router.Content = Router;
+
+export default Router;

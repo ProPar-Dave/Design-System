@@ -1,45 +1,47 @@
-import React, { useEffect } from 'react'
-import { X } from 'lucide-react'
+import React from 'react';
+import { useDrawerController } from './DrawerController';
 
-type Props = {
-  open: boolean
-  title?: string
-  onClose: () => void
-  children?: React.ReactNode
+function PreviewPanel({ item }: { item: any }) {
+  return (
+    <div className="preview-panel">
+      <p>Preview for {item.name}</p>
+      <div style={{ 
+        padding: '16px', 
+        background: 'var(--color-accent)', 
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)'
+      }}>
+        <strong>Component Details:</strong>
+        <br />ID: {item.id}
+        <br />Level: {item.level}
+        <br />Status: {item.status}
+        <br />Version: {item.version}
+      </div>
+    </div>
+  );
 }
 
-export default function ComponentDrawer({ open, title, onClose, children }: Props) {
-  // Trap ESC and ensure body doesn't scroll while open
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [open, onClose])
-
+export default function ComponentDrawer() {
+  const { isOpen, item, close } = useDrawerController();
+  if (!isOpen || !item) return null;
+  
   return (
-    <div aria-hidden={!open} className={`adsm-drawer ${open ? 'adsm-drawer--open' : ''}`}>
-      <aside aria-label="Component drawer panel" className="adsm-drawer__panel" data-theme="panel">
+    <>
+      <div className="adsm-backdrop" onClick={close} />
+      <aside className="adsm-drawer" data-theme="panel">
         <header className="adsm-drawer__header">
-          <div className="adsm-drawer__title">{title}</div>
-          <button
-            className="adsm-drawer__close"
-            onClick={onClose}
-            aria-label="Close drawer"
-          >
-            <X size={16} />
-          </button>
+          <h3 style={{margin:0}}>{item.name}</h3>
+          <div className="adsm-drawer__tabs" role="tablist" aria-label="Component tabs">
+            <button className="adsm-tab" role="tab" aria-selected="true">Preview</button>
+            <button className="adsm-tab" role="tab" aria-selected="false">Notes</button>
+            <button className="adsm-tab" role="tab" aria-selected="false">Props</button>
+            <button className="adsm-tab" role="tab" aria-selected="false">JSON</button>
+          </div>
         </header>
-        <div className="adsm-drawer__content">{children}</div>
+        <section className="adsm-drawer__body">
+          <PreviewPanel item={item} />
+        </section>
       </aside>
-      <button aria-label="Overlay" className="adsm-drawer__scrim" onClick={onClose} />
-    </div>
-  )
+    </>
+  );
 }

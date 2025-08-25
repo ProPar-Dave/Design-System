@@ -1,40 +1,50 @@
-.adsm-ui .adsm-drawer {
+/* Right-side token-bound drawer */
+.adsm-drawer {
   position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 60;
-}
-.adsm-ui .adsm-drawer__scrim {
-  position: absolute; inset: 0;
-  background: color-mix(in oklab, var(--color-bg), black 50%);
-  opacity: 0; transition: opacity 160ms ease;
-  pointer-events: none; border: 0;
-}
-.adsm-ui .adsm-drawer__panel {
-  position: absolute; top: 0; right: 0; bottom: 0;
+  top: 0;
+  right: 0;
+  height: 100vh;
   width: min(720px, 92vw);
   background: var(--color-panel);
   color: var(--color-text);
   border-left: 1px solid var(--color-border);
-  box-shadow: -0.5rem 0 2rem color-mix(in oklab, var(--color-bg), black 35%);
-  transform: translateX(105%);
-  transition: transform 200ms ease;
-  display: flex; flex-direction: column;
+  box-shadow: -0.5rem 0 1.25rem rgba(0,0,0,.25);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  z-index: 60;
 }
-.adsm-ui .adsm-drawer__header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: .75rem; padding: .75rem 1rem;
+.adsm-drawer__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-panel);
 }
-.adsm-ui .adsm-drawer__title { font-weight: 600; }
-.adsm-ui .adsm-drawer__close {
-  background: transparent; color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm, 8px);
-  padding: .25rem .4rem;
+.adsm-drawer__tabs {
+  display: flex;
+  gap: 8px;
 }
-.adsm-ui .adsm-drawer__content { padding: 1rem; overflow: auto; flex: 1; }
-.adsm-ui .adsm-drawer--open { pointer-events: auto; }
-.adsm-ui .adsm-drawer--open .adsm-drawer__panel { transform: translateX(0); }
-.adsm-ui .adsm-drawer--open .adsm-drawer__scrim { opacity: 1; pointer-events: auto; }
+.adsm-tab {
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--color-text);
+}
+.adsm-tab[aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-accent), transparent 80%);
+}
+.adsm-drawer__body {
+  overflow: auto;
+  padding: 16px;
+  background: var(--color-bg);
+}
+
+/* Backdrop */
+.adsm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.28);
+  backdrop-filter: blur(1.5px);
+  z-index: 50;
+}

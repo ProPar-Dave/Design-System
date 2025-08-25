@@ -1,76 +1,41 @@
-/* Atomic DS Manager – Primary Navigation
-   Uses tokens only. No hard-coded colors. */
-
-:root {
-  /* fallbacks (rarely used in-app since tokens are injected), safe anyway */
-  --adsm-sidebar-w: 264px;
+/* Shell layout */
+.adsm-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: 100%;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
-/* Sidebar container */
-.adsm-ui .sidebar,
-[data-theme] .sidebar {
-  width: var(--adsm-sidebar-w);
-  flex: 0 0 var(--adsm-sidebar-w);
+.adsm-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
   background: var(--color-panel);
-  color: var(--color-text);
   border-right: 1px solid var(--color-border);
 }
 
-/* Sidebar header */
-.adsm-ui .sidebar-header {
+.adsm-main {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* Basic sidebar nav items (keeps your existing markup) */
+.adsm-sidebar a,
+.adsm-sidebar button {
   display: flex;
   align-items: center;
-  gap: var(--space-3, 12px);
-  padding: var(--space-4, 16px);
-  border-bottom: 1px solid var(--color-border);
-}
-.adsm-ui .sidebar-title {
-  font-weight: 600;
-  color: var(--color-foreground);
-}
-.adsm-ui .sidebar-subtitle {
-  opacity: .7;
-  font-size: 12px;
-}
-
-/* Nav list */
-.adsm-ui nav.sidebar-nav[role="navigation"] {
-  display: grid;
-  gap: 4px;
-  padding: 8px;
-}
-.adsm-ui .sidebar-link {
-  display: grid;
-  grid-template-columns: 20px 1fr;
-  align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md, 10px);
+  width: 100%;
+  padding: 10px 14px;
   color: var(--color-text);
-  background: transparent;
   text-decoration: none;
-  outline: none;
+  border-radius: var(--radius-md, 8px);
 }
-.adsm-ui .sidebar-link:hover {
-  background: var(--color-hover-bg);
-}
-.adsm-ui .sidebar-link:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
-}
-.adsm-ui .sidebar-link[aria-current="page"],
-.adsm-ui .sidebar-link.is-active {
-  background: color-mix(in oklab, var(--color-accent) 14%, transparent);
-  color: var(--color-foreground);
-  border: 1px solid color-mix(in oklab, var(--color-accent) 40%, var(--color-border));
-}
-
-/* Badge / counts */
-.adsm-ui .nav-badge {
-  justify-self: end;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--color-foreground);
-  background: color-mix(in oklab, var(--color-accent) 28%, transparent);
-  border: 1px solid color-mix(in oklab, var(--color-accent) 45%, var(--color-border));
+.adsm-sidebar a[aria-current="page"],
+.adsm-sidebar .is-active {
+  background: color-mix(in srgb, var(--color-accent), transparent 86%);
+  outline: 2px solid color-mix(in srgb, var(--color-accent), transparent 70%);
 }

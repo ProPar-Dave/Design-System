@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 export type DrawerItem = {
   id: string;
   name: string;
@@ -29,3 +31,20 @@ export function close() {
   }
 }
 export function getCurrent() { return state.current; }
+
+// Hook for components to use the drawer controller
+export function useDrawerController() {
+  const [drawerState, setDrawerState] = useState(state);
+  
+  useEffect(() => {
+    const unsubscribe = subscribe(setDrawerState);
+    return unsubscribe;
+  }, []);
+
+  return {
+    isOpen: !!drawerState.current,
+    item: drawerState.current,
+    open,
+    close
+  };
+}

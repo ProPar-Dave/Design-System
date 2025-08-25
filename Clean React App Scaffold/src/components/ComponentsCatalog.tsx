@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react'
-import ComponentDrawer from '../drawer/ComponentDrawer'
+import React from 'react'
+import { useDrawerController } from '../drawer/DrawerController';
 
 // Sample components data for the catalog
 const COMPONENTS = [
@@ -26,41 +26,41 @@ const COMPONENTS = [
   }
 ];
 
-export default function ComponentsCatalog() {
-  const [open, setOpen] = useState(false)
-  const [active, setActive] = useState<any>(null)
+function ComponentCard({ item, onClick, ...props }: { item: any; onClick: () => void; [key: string]: any }) {
+  return (
+    <article
+      className="component-card"
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${item.name}`}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      {...props}
+    >
+      {/* thumbnail, badges, etc. */}
+      <div className="component-card__title">{item.name}</div>
+    </article>
+  )
+}
 
-  const openFor = useCallback((item: any) => {
-    if (!item) return
-    setActive(item)
-    setOpen(true)
-  }, [])
+export default function ComponentsCatalog() {
+  const ctrl = useDrawerController();
 
   return (
-    <section className="components-grid">
-      {COMPONENTS.map(c => (
-        <article
+    <div className="catalog-grid">
+      {COMPONENTS.map((c) => (
+        <ComponentCard
           key={c.id}
-          className="component-card"
-          role="button"
-          tabIndex={0}
-          aria-label={`Open ${c.name}`}
-          onClick={() => openFor(c)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              openFor(c)
-            }
-          }}
-        >
-          {/* thumbnail, badges, etc. */}
-          <div className="component-card__title">{c.name}</div>
-        </article>
+          item={c}
+          onClick={() => ctrl.open(c)}   // <- ensure drawer opens on card click
+          data-drawer-target={c.id}
+        />
       ))}
-
-      <ComponentDrawer open={open} title={active?.name} onClose={() => setOpen(false)}>
-        {/* tabs / preview / props / json go here */}
-      </ComponentDrawer>
-    </section>
-  )
+    </div>
+  );
 }

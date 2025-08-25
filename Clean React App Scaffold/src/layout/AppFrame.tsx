@@ -1,22 +1,21 @@
 import React from 'react';
-import '../styles/nav.css'; // ensure nav styles are loaded
+import '../styles/nav.css';
+import '../styles/drawer.css';
+import ComponentDrawer from '../drawer/ComponentDrawer';
 
 type Props = {
+  sidebar: React.ReactNode;
   children: React.ReactNode;
-  theme?: 'light' | 'dark';
 };
 
-export default function AppFrame({ children, theme }: Props) {
-  // Keep a stable, top-level wrapper so tokens & theme apply everywhere.
-  // The className "adsm-ui" provides the namespace and the data-theme drives tokens.
-  const currentTheme = theme ?? (document.documentElement.dataset.theme as
-    | 'light'
-    | 'dark'
-    | undefined) ?? 'dark';
-
+export default function AppFrame({ sidebar, children }: Props) {
   return (
-    <div className="adsm-ui app" data-theme={currentTheme}>
-      {children}
+    <div className="adsm-shell">
+      <aside className="adsm-sidebar" data-theme="panel">
+        {sidebar}
+      </aside>
+      <main className="adsm-main">{children}</main>
+      <ComponentDrawer />
     </div>
   );
 }
