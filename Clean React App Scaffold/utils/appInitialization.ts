@@ -3,8 +3,10 @@ import { getBrowserInfo, getAppVersion } from '../diagnostics/utils';
 import { isDevelopment, safePing, safeInitPingSystem, announceToScreenReader } from './appHelpers';
 import { migrateTokensToSemanticVars } from '../tokensMigration';
 import { migrateCatalogStorage } from './catalog';
+import { initializeCatalog } from '../src/catalog/loader';
 import { loadDevelopmentUtilities } from './devUtilities';
 import { getTheme } from '../src/theme/themeManager';
+import { devWarn, devLog, devError } from '../src/utils/log';
 
 export const APP_FEATURES = [
   'diagnostics-system',
@@ -24,7 +26,9 @@ export const APP_FEATURES = [
   'automatic-fallback-handling',
   'comprehensive-form-validation',
   'interactive-state-checking',
-  'button-variant-validation'
+  'button-variant-validation',
+  'catalog-loading-system',
+  'production-catalog-fallback'
 ];
 
 export const ACCESSIBILITY_FEATURES = [
@@ -48,7 +52,8 @@ export const ACCESSIBILITY_FEATURES = [
   'Touch target size validation for mobile accessibility',
   'Label and ARIA attribute validation',
   'Real-time contrast monitoring and enforcement',
-  'Comprehensive diagnostics and audit reporting'
+  'Comprehensive diagnostics and audit reporting',
+  'Production-ready component catalog with fallback system'
 ];
 
 function initializeSession(): string {
@@ -81,7 +86,7 @@ async function runTokenMigration(): Promise<void> {
       });
     }
   } catch (error) {
-    console.warn('Token migration failed:', error);
+    devWarn('Token migration failed:', error);
     safeLogEvent('error', 'tokens/migration', { 
       operation: 'legacy-to-semantic',
       error: String(error) 
@@ -97,7 +102,7 @@ async function runCatalogMigration(): Promise<void> {
       success: true 
     });
   } catch (error) {
-    console.warn('Catalog migration failed:', error);
+    devWarn('Catalog migration failed:', error);
     safePing('error', {
       job: 'catalog-migration',
       message: error instanceof Error ? error.message : String(error)
@@ -109,12 +114,62 @@ async function runCatalogMigration(): Promise<void> {
   }
 }
 
+async function initializeCatalogSystem(): Promise<void> {
+  try {
+    devLog('AppInit: Initializing catalog system...');
+    
+    const result = await initializeCatalog();
+    
+    safeLogEvent('info', 'catalog/init', {
+      operation: 'initialize',
+      loadedFrom: result.loadedFrom,
+      componentCount: result.count,
+      hasError: !!result.error,
+      url: result.url,
+      success: !result.error
+    });
+    
+    if (result.error) {
+      devWarn('Catalog initialization completed with error:', result.error);
+      safePing('warning', {
+        job: 'catalog-init',
+        message: result.error,
+        componentCount: result.count,
+        loadedFrom: result.loadedFrom
+      });
+    } else {
+      devLog(`Catalog initialized successfully: ${result.count} components from ${result.loadedFrom}`);
+      safePing('info', {
+        job: 'catalog-init',
+        componentCount: result.count,
+        loadedFrom: result.loadedFrom,
+        url: result.url
+      });
+    }
+    
+    // Announce to screen reader
+    announceToScreenReader(`Loaded ${result.count} components from ${result.loadedFrom}`);
+    
+  } catch (error) {
+    devError('Catalog initialization failed:', error);
+    safePing('error', {
+      job: 'catalog-init',
+      message: error instanceof Error ? error.message : String(error)
+    });
+    safeLogEvent('error', 'catalog/init', {
+      operation: 'initialize',
+      error: String(error),
+      success: false
+    });
+  }
+}
+
 function sendPublishNotification(): void {
   setTimeout(() => {
     safePing('publish', {
       id: 'latest',
       event: 'publish',
-      message: 'Enhanced with comprehensive button accessibility audit and WCAG AA compliance',
+      message: 'Enhanced with production-ready catalog system and comprehensive accessibility features',
       url: window.location.origin,
       version: getAppVersion(),
       features: ACCESSIBILITY_FEATURES
@@ -164,8 +219,11 @@ export async function initializeApp(): Promise<void> {
   // Run one-time token migration after theme tokens are applied
   await runTokenMigration();
   
-  // Run catalog migration once
+  // Run legacy catalog migration once
   await runCatalogMigration();
+  
+  // Initialize new catalog system
+  await initializeCatalogSystem();
 
   // Track successful initialization (don't await to avoid blocking)
   safePing('done', { 
@@ -190,7 +248,7 @@ export async function initializeApp(): Promise<void> {
 }
 
 export function handleInitializationError(error: unknown): void {
-  console.error('App initialization failed:', error);
+  devError('App initialization failed:', error);
   safePing('error', {
     job: 'app-bootstrap',
     message: error instanceof Error ? error.message : String(error)

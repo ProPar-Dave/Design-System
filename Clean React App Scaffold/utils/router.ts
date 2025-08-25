@@ -4,6 +4,7 @@
  */
 
 import * as React from 'react';
+import { parseHash as parseHashCore, navigate as navigateCore, updateParams, getCurrentRoute as getCurrentRouteCore, getParam } from '../src/router/hashUtils';
 
 export interface HashState {
   path: string;
@@ -13,25 +14,21 @@ export interface HashState {
 }
 
 /**
- * Parse current hash into structured state
+ * Parse current hash into structured state (legacy interface)
  */
 export function parseHash(): HashState {
-  const hash = window.location.hash.slice(1) || '/';
-  const [path, queryString] = hash.split('?', 2);
-  
+  const { path, params } = parseHashCore();
   const state: HashState = { path };
   
-  if (queryString) {
-    const params = new URLSearchParams(queryString);
-    params.forEach((value, key) => {
-      state[key] = value;
-    });
-    
-    // Type-safe tab parsing
-    const tab = params.get('tab');
-    if (tab && ['preview', 'notes', 'props', 'json'].includes(tab)) {
-      state.tab = tab as 'preview' | 'notes' | 'props' | 'json';
-    }
+  // Copy all params to state
+  Object.entries(params).forEach(([key, value]) => {
+    state[key] = value;
+  });
+  
+  // Type-safe tab parsing
+  const tab = params.tab;
+  if (tab && ['preview', 'notes', 'props', 'json'].includes(tab)) {
+    state.tab = tab as 'preview' | 'notes' | 'props' | 'json';
   }
   
   return state;
@@ -41,32 +38,13 @@ export function parseHash(): HashState {
  * Update hash with new state, preserving existing parameters
  */
 export function updateHash(updates: Partial<Omit<HashState, 'path'>> & { path?: string }) {
-  const current = parseHash();
-  const newState = { ...current, ...updates };
-  
-  // Remove undefined values
-  Object.keys(newState).forEach(key => {
-    if (newState[key] === undefined || newState[key] === null) {
-      delete newState[key];
-    }
-  });
-  
-  // Build new hash
-  const { path, ...params } = newState;
-  const queryParams = new URLSearchParams();
-  
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined) {
-      queryParams.set(key, value);
-    }
-  });
-  
-  const queryString = queryParams.toString();
-  const newHash = path + (queryString ? `?${queryString}` : '');
-  
-  // Update URL without triggering hashchange if it's the same
-  if (window.location.hash !== `#${newHash}`) {
-    window.history.replaceState(null, '', `#${newHash}`);
+  if (updates.path) {
+    // Navigate to new path with params
+    const { path, ...params } = updates;
+    navigateCore(path as any, params);
+  } else {
+    // Update only parameters
+    updateParams(updates);
   }
 }
 
@@ -75,48 +53,13 @@ export function updateHash(updates: Partial<Omit<HashState, 'path'>> & { path?: 
  */
 export function navigateToHash(state: Partial<HashState>) {
   updateHash(state);
-  // Trigger hashchange event for listeners
-  window.dispatchEvent(new HashChangeEvent('hashchange'));
 }
 
 /**
  * Navigate with proper history management
  */
 export function navigateTo(path: string, params?: Record<string, string>) {
-  try {
-    const state: HashState = { path, ...params };
-    
-    // Remove undefined values
-    Object.keys(state).forEach(key => {
-      if (state[key] === undefined || state[key] === null) {
-        delete state[key];
-      }
-    });
-    
-    // Build new hash
-    const { path: statePath, ...stateParams } = state;
-    const queryParams = new URLSearchParams();
-    
-    Object.entries(stateParams).forEach(([key, value]) => {
-      if (value !== undefined) {
-        queryParams.set(key, value);
-      }
-    });
-    
-    const queryString = queryParams.toString();
-    const newHash = statePath + (queryString ? `?${queryString}` : '');
-    
-    // Use pushState for proper back/forward navigation
-    if (window.location.hash !== `#${newHash}`) {
-      window.history.pushState(null, '', `#${newHash}`);
-      // Trigger hashchange event manually since pushState doesn't trigger it
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    }
-  } catch (error) {
-    console.warn('Navigation failed:', error);
-    // Fallback to basic hash navigation
-    window.location.hash = path;
-  }
+  navigateCore(path as any, params);
 }
 
 /**
@@ -150,16 +93,15 @@ export function useHashState() {
  * Get current route from hash path
  */
 export function getCurrentRoute(): string {
-  const hash = parseHash();
-  const path = hash.path.replace('/', '');
-  return path || 'overview';
+  return getCurrentRouteCore();
 }
 
 /**
  * Navigate to a route (simplified for main navigation)
  */
 export function navigate(route: string) {
-  navigateTo(`/${route}`);
+  const path = route.startsWith('#/') ? route : `#/${route}`;
+  navigateCore(path as any);
 }
 
 /**
@@ -176,5 +118,19 @@ export function useRouter() {
     navigate,
     navigateTo,
     updateHash
+  };
+}
+
+/**
+ * Hook for hash-based routing with current route and params
+ * Compatible with Layout and Router components
+ */
+export function useHashRouter() {
+  const [hashState] = useHashState();
+  const currentRoute = getCurrentRoute();
+  
+  return {
+    currentRoute,
+    params: hashState
   };
 }

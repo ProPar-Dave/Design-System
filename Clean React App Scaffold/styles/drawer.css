@@ -1,688 +1,522 @@
-/* === Enhanced Drawer Layout System === */
+/* ===== ADSM DRAWER SYSTEM ===== */
+/* Comprehensive drawer styling for component details and interactions */
 
-/* Drawer container */
+/* Main Drawer Container */
 .adsm-drawer {
-  width: var(--adsm-drawer-width);
-  max-width: 100vw;
-  background: var(--color-panel);
-  color: var(--color-text);
-  border-left: 1px solid var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius) 0 0 var(--adsm-drawer-radius);
+  width: 480px;
+  max-width: 40%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  background: var(--color-panel);
+  color: var(--color-foreground);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+  border-left: 1px solid var(--color-border);
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
 }
 
-/* Sticky header */
+.adsm-drawer[open],
+.adsm-drawer.open {
+  transform: translateX(0);
+}
+
+/* Drawer Backdrop */
+.adsm-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.adsm-drawer-backdrop.open {
+  opacity: 1;
+}
+
+/* Drawer Header */
 .adsm-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
   position: sticky;
   top: 0;
-  z-index: 2;
-  height: var(--adsm-drawer-header-h);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 calc(var(--adsm-drawer-pad) + 4px);
-  background: var(--color-panel);
-  border-bottom: 1px solid var(--adsm-drawer-border);
-  flex-shrink: 0;
+  z-index: 10;
 }
 
 .adsm-drawer-header h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
 .adsm-drawer-header .meta {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
-  margin-top: 2px;
+  margin-top: var(--space-xs);
 }
 
-/* Tabs bar (separate sticky row) */
-.adsm-drawer-tabs {
-  position: sticky;
-  top: var(--adsm-drawer-header-h);
-  z-index: 1;
-  height: var(--adsm-drawer-tabs-h);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 0 var(--adsm-drawer-pad);
-  background: var(--color-panel);
-  border-bottom: 1px solid var(--adsm-drawer-border);
-  flex-shrink: 0;
-}
-
-/* Scrollable content body with correct offset */
-.adsm-drawer-body {
-  /* subtract sticky header + tabs heights */
-  height: calc(100vh - var(--adsm-drawer-header-h) - var(--adsm-drawer-tabs-h));
-  overflow: auto;
-  padding: var(--adsm-drawer-pad);
-  display: grid;
-  row-gap: var(--adsm-drawer-gap);
-  flex: 1;
-  /* Ensure focus rings aren't clipped */
-  scroll-padding: 8px;
-}
-
-/* Ensure focus rings don't get clipped when scrolling */
-.adsm-drawer-body:focus-within {
-  outline: none;
-}
-
-.adsm-drawer-body > * {
-  /* Add some breathing room around focusable elements */
-  margin: 4px;
-}
-
-.adsm-drawer-body > *:focus-visible {
-  /* Ensure focus rings have space */
-  margin: 8px;
-}
-
-/* === Enhanced Form Controls with High-Contrast Tokens === */
-.adsm-input,
-.adsm-select,
-.adsm-textarea {
-  background-color: var(--input-bg);
-  color: var(--input-text);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  width: 100%;
-  /* Ensure minimum touch target size */
-  min-height: 44px;
-}
-
-.adsm-input::placeholder,
-.adsm-textarea::placeholder {
-  color: var(--input-placeholder);
-  opacity: 1;
-}
-
-.adsm-select {
-  appearance: none;
-  background-image: none; /* never use external bg images */
-  cursor: pointer;
-  /* Add simple text arrow using CSS content */
-  position: relative;
-}
-
-/* Add dropdown arrow using pseudo-element instead of background image */
-.adsm-select::after {
-  content: '▼';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--input-text);
-  font-size: 12px;
-}
-
-.adsm-textarea {
-  min-height: 80px;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-/* Focus states with proper contrast */
-.adsm-input:focus,
-.adsm-select:focus,
-.adsm-textarea:focus {
-  outline: none;
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent);
-  background-color: var(--input-bg); /* Ensure background stays consistent */
-}
-
-/* Disabled states */
-.adsm-input:disabled,
-.adsm-select:disabled,
-.adsm-textarea:disabled {
-  background-color: var(--input-disabled-bg);
-  color: var(--input-disabled-text);
-  border-color: var(--input-border);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Hover states for better feedback */
-.adsm-input:not(:disabled):hover,
-.adsm-select:not(:disabled):hover,
-.adsm-textarea:not(:disabled):hover {
-  border-color: var(--input-focus-border);
-}
-
-/* Close button hit area + z-index (prevents overlap bugs) */
+/* Drawer Close Button */
 .adsm-drawer-close {
-  width: 36px; 
-  height: 36px;
-  display: grid; 
-  place-items: center;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
-  border: 1px solid var(--adsm-drawer-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted-foreground);
   cursor: pointer;
-  color: var(--color-text);
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .adsm-drawer-close:hover {
-  background: var(--color-muted);
+  background: var(--color-accent);
+  color: var(--color-text);
 }
 
 .adsm-drawer-close:focus-visible {
-  outline: 3px solid var(--color-accent);
+  outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
-/* Backdrop overlay */
-.adsm-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: var(--z-drawer);
+/* Drawer Tabs */
+.adsm-drawer-tabs {
   display: flex;
-  justify-content: flex-end;
-  align-items: stretch;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 73px; /* Header height */
+  z-index: 9;
+  overflow-x: auto;
 }
 
-/* Responsive drawer width */
-@media (max-width: 768px) {
-  .adsm-drawer {
-    width: 100vw;
-    max-width: 100vw;
-    border-radius: 0;
-  }
-}
-
-@media (max-width: 1200px) {
-  .adsm-drawer {
-    width: min(var(--adsm-drawer-width), 50vw);
-  }
-}
-
-/* Enhanced accessibility for drawer navigation with WCAG AA compliance */
-.adsm-drawer-tabs[role="tablist"] {
-  /* Ensure proper tab order */
-  display: flex;
-  gap: 8px;
-}
-
-.adsm-drawer-tabs [role="tab"] {
-  /* Override global tab styles for drawer-specific behavior with enhanced contrast */
-  min-width: fit-content;
-  white-space: nowrap;
-  text-align: center;
+.adsm-drawer-tabs .adsm-tab {
   flex: 1;
-  max-width: none;
-  /* Enhanced text contrast for better readability */
-  color: var(--tab-inactive-fg);
-  background: var(--tab-inactive-bg);
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.adsm-drawer-tabs [role="tab"]:hover {
-  /* Enhanced hover state for better feedback */
-  background: var(--tab-hover-bg);
-  color: var(--color-text); /* Use stronger text color on hover */
-}
-
-.adsm-drawer-tabs [role="tab"][aria-selected="true"] {
-  /* Enhanced active state with high contrast */
-  color: var(--tab-active-fg);
-  background: var(--tab-active-bg);
-  font-weight: 600;
-  border-color: color-mix(in srgb, var(--tab-active-fg) 20%, transparent);
-}
-
-.adsm-drawer-tabs [role="tab"]:focus-visible {
-  /* Ensure focus is visible in tab context */
-  outline: 3px solid var(--color-ring) !important;
-  outline-offset: 2px !important;
-  z-index: 1;
-  position: relative;
-}
-
-/* Panel content styling */
-.adsm-drawer-body [role="tabpanel"] {
-  /* Remove any default margins that might interfere with grid layout */
-  margin: 0;
-  /* Ensure panels take full available space */
-  min-height: 0;
-}
-
-/* Section cards inside drawer */
-.adsm-drawer-body .adsm-section {
-  /* Override margin set by parent grid */
-  margin: 0;
-}
-
-/* Ensure proper spacing in Preview sections */
-.adsm-drawer-body .preview-section {
-  display: grid;
-  gap: var(--adsm-drawer-gap);
-}
-
-.adsm-drawer-body .preview-section h4 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-/* Properties editor styling within drawer */
-.adsm-drawer-body .props-editor {
-  padding: 16px;
-  background: var(--color-bg);
-  border: 1px solid var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius);
-}
-
-/* Enhanced form field groups for better layout */
-.adsm-field-group {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.adsm-field-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 4px;
-}
-
-.adsm-field-hint {
-  font-size: 12px;
-  color: var(--color-muted-foreground);
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
-/* Button styling within drawer */
-.adsm-drawer-body .adsm-button {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
   border: none;
-  border-radius: var(--radius-md);
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted-foreground);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 40px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  text-align: center;
 }
 
-.adsm-drawer-body .adsm-button:hover:not(:disabled) {
-  background: var(--color-primary);
-  opacity: 0.9;
-}
-
-.adsm-drawer-body .adsm-button:focus-visible {
-  outline: 3px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.adsm-drawer-body .adsm-button:disabled {
-  background: var(--input-disabled-bg);
-  color: var(--input-disabled-text);
-  cursor: not-allowed;
-}
-
-/* Metadata display styling with enhanced contrast */
-.adsm-drawer-metadata {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 2px solid var(--adsm-drawer-border);
-}
-
-.adsm-drawer-metadata-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Fixed CSS property syntax */
-  gap: 16px;
-  font-size: 14px; /* Fixed CSS property syntax */
-  margin-bottom: 16px; /* Fixed CSS property syntax */
-}
-
-.adsm-drawer-metadata-item {
-  /* Use high-contrast text color with proper background */
+.adsm-drawer-tabs .adsm-tab:hover {
   color: var(--color-text);
-  background: transparent;
-  padding: 8px 0;
-  line-height: 1.5;
+  background: var(--color-accent);
 }
 
-.adsm-drawer-metadata-item strong {
-  /* Ensure labels have sufficient contrast */
-  color: var(--color-text);
-  font-weight: 600;
+.adsm-drawer-tabs .adsm-tab[aria-selected="true"] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: var(--color-accent);
 }
 
-.adsm-drawer-metadata-item code {
-  /* Enhanced contrast for ID display */
-  font-size: 12px;
-  background: var(--color-muted);
-  color: var(--color-text); /* Use main text color instead of relying on background contrast */
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.adsm-drawer-tabs .adsm-tab:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: -2px;
 }
 
-/* Tags and dependencies styling with WCAG AA accessibility */
-.adsm-drawer-tags {
-  margin-top: 16px;
+/* Drawer Body Content */
+.adsm-drawer-content,
+.adsm-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--color-background);
 }
 
-.adsm-drawer-tags h4 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
+/* Drawer Sections */
+.adsm-drawer .adsm-section {
+  margin-bottom: var(--space-6);
+}
+
+.adsm-drawer .adsm-section:last-child {
+  margin-bottom: 0;
+}
+
+.adsm-drawer .adsm-section h3,
+.adsm-drawer .adsm-section h4 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
-.adsm-drawer-tags-list {
+/* Preview Section */
+.adsm-drawer .preview-section {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.adsm-drawer-tag {
-  padding: 6px 12px;
-  /* Use semantic chip tokens for proper contrast */
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  border: 1px solid var(--chip-border);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  transition: all 0.2s ease;
-  /* Ensure minimum touch target size for accessibility */
-  min-height: 32px;
-  min-width: 32px;
-  box-sizing: border-box;
-}
-
-.adsm-drawer-tag:hover {
-  background: var(--chip-hover);
-  cursor: default;
-}
-
-.adsm-drawer-tag:focus-visible {
-  outline: 3px solid var(--color-ring) !important;
-  outline-offset: 2px !important;
-}
-
-.adsm-drawer-dependency {
-  padding: 6px 12px;
-  /* Use differentiated but accessible colors for dependencies */
-  background: var(--info-bg);
-  color: var(--info-text);
-  border: 1px solid var(--info-border);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  transition: all 0.2s ease;
-  /* Ensure minimum touch target size for accessibility */
-  min-height: 32px;
-  min-width: 32px;
-  box-sizing: border-box;
-}
-
-.adsm-drawer-dependency:hover {
-  /* Slightly darker for hover state */
-  background: color-mix(in srgb, var(--info-bg) 85%, var(--info-border));
-  cursor: default;
-}
-
-.adsm-drawer-dependency:focus-visible {
-  outline: 3px solid var(--color-ring) !important;
-  outline-offset: 2px !important;
-}
-
-/* JSON display styling */
-.adsm-drawer-json {
-  background: var(--color-bg);
-  border: 2px solid var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius);
-  overflow: hidden;
-}
-
-.adsm-drawer-json pre {
-  padding: 20px;
-  font-size: 13px;
-  line-height: 1.5;
-  overflow-x: auto;
-  color: var(--color-text);
-  font-family: 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
-  margin: 0;
-  background: transparent;
-  /* Allow focus for keyboard users */
-  outline: none;
-}
-
-.adsm-drawer-json pre:focus-visible {
-  outline: 3px solid var(--color-ring) !important;
-  outline-offset: -3px !important;
-}
-
-/* Notes section styling with enhanced readability */
+/* Notes Section */
 .adsm-drawer-notes {
-  padding: 20px;
-  background: var(--color-bg);
-  border: 2px solid var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius);
-  line-height: 1.6;
-  min-height: 160px;
+  min-height: 120px;
 }
 
 .adsm-drawer-notes-content {
+  padding: var(--space-3);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   white-space: pre-wrap;
-  color: var(--color-text);
-  font-size: 14px;
-  line-height: 1.6;
-  word-wrap: break-word;
-  /* Ensure readability with proper contrast */
-  background: transparent;
+  line-height: var(--line-height-normal);
 }
 
 .adsm-drawer-notes-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 120px;
-  /* Enhanced contrast for empty state */
-  color: var(--color-text);
-  opacity: 0.6; /* Use opacity instead of muted color token */
-  font-size: 16px;
+  min-height: 120px;
+  color: var(--color-muted-foreground);
   font-style: italic;
   text-align: center;
-  background: color-mix(in srgb, var(--color-muted) 20%, transparent);
-  border: 2px dashed var(--color-border);
-  border-radius: 8px;
-  margin: 8px 0;
+  background: var(--color-panel);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-/* Props specification display with enhanced accessibility */
+/* Props Specification */
 .adsm-drawer-props-spec {
-  padding: 20px;
-  background: var(--color-bg);
-  border: 2px solid var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .adsm-drawer-props-spec-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--space-3);
 }
 
 .adsm-drawer-props-spec-item {
-  padding: 16px;
+  padding: var(--space-3);
   background: var(--color-panel);
-  border: 1px solid var(--adsm-drawer-border);
-  border-radius: 8px;
-  /* Ensure sufficient contrast between item background and parent */
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 20%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .adsm-drawer-props-spec-name {
-  font-size: 16px;
-  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text);
-  margin-bottom: 8px;
-  line-height: 1.4;
+  margin-bottom: var(--space-xs);
 }
 
 .adsm-drawer-props-spec-required {
-  /* High-contrast required indicator */
   color: var(--color-destructive);
-  margin-left: 4px;
-  font-weight: 700;
-  font-size: 18px;
+  margin-left: var(--space-xs);
 }
 
 .adsm-drawer-props-spec-meta {
-  font-size: 14px;
-  /* Enhanced contrast for metadata */
-  color: var(--color-text); /* Use main text color instead of muted */
-  opacity: 0.8; /* Subtle opacity instead of relying on muted color */
-  margin-bottom: 8px;
-  display: grid;
-  gap: 4px;
-  line-height: 1.4;
-}
-
-.adsm-drawer-props-spec-meta strong {
-  /* Ensure labels within meta are visible */
-  color: var(--color-text);
-  opacity: 1;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--space-xs);
 }
 
 .adsm-drawer-props-spec-description {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
   color: var(--color-text);
-  line-height: 1.5;
-  margin-bottom: 8px;
+  margin-top: var(--space-xs);
 }
 
 .adsm-drawer-props-spec-options {
-  font-size: 13px;
-  /* Enhanced contrast for options display */
-  color: var(--color-text);
-  background: var(--info-bg); /* Use info background for better differentiation */
-  border: 1px solid var(--info-border);
-  padding: 8px 12px;
-  border-radius: 6px;
-  line-height: 1.4;
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  margin-top: var(--space-xs);
 }
 
-.adsm-drawer-props-spec-options strong {
-  color: var(--color-text);
-  font-weight: 600;
+/* JSON Display */
+.adsm-drawer-json {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-/* Empty state styling with enhanced accessibility */
+.adsm-drawer-json pre {
+  margin: 0;
+  padding: var(--space-4);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Drawer Empty States */
 .adsm-drawer-empty {
-  padding: 32px;
-  background: color-mix(in srgb, var(--color-muted) 30%, transparent);
-  border: 2px dashed var(--adsm-drawer-border);
-  border-radius: var(--adsm-drawer-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
   text-align: center;
-  /* Enhanced contrast for empty states */
-  color: var(--color-text);
-  opacity: 0.7; /* Use opacity instead of muted color for better control */
-  font-size: 16px;
-  line-height: 1.4;
-  /* Add icon or visual indicator */
-  position: relative;
+  color: var(--color-muted-foreground);
+  padding: var(--space-6);
 }
 
-.adsm-drawer-empty::before {
-  content: "📭";
-  display: block;
-  font-size: 24px;
-  margin-bottom: 8px;
+.adsm-drawer-empty .icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
   opacity: 0.6;
 }
 
-/* Animation for drawer entrance */
-@media (prefers-reduced-motion: no-preference) {
-  .adsm-drawer {
-    animation: slideInFromRight 0.3s ease-out;
-  }
-  
-  @keyframes slideInFromRight {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
+.adsm-drawer-empty h4 {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text);
 }
 
-/* High contrast mode adjustments */
-@media (prefers-contrast: high) {
+.adsm-drawer-empty p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+/* Metadata Grid */
+.adsm-drawer-metadata {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.adsm-drawer-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.adsm-drawer-metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.adsm-drawer-metadata-item strong {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tags and Dependencies */
+.adsm-drawer-tags {
+  margin-bottom: var(--space-4);
+}
+
+.adsm-drawer-tags h4 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.adsm-drawer-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.adsm-drawer-tag,
+.adsm-drawer-dependency {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  transition: all 0.2s ease;
+}
+
+.adsm-drawer-tag {
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+}
+
+.adsm-drawer-dependency {
+  background: var(--chip-info-bg);
+  color: var(--chip-info-text);
+  border: 1px solid var(--chip-info-border);
+}
+
+.adsm-drawer-tag:hover,
+.adsm-drawer-dependency:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.adsm-drawer-tag:focus-visible,
+.adsm-drawer-dependency:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Props Editor Integration */
+.adsm-drawer .props-editor {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+/* Portal Container */
+.adsm-drawer-portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.adsm-drawer-portal.active {
+  pointer-events: auto;
+}
+
+/* Legacy Drawer Support */
+.adsm-drawer__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.adsm-drawer__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
+}
+
+.adsm-drawer__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.adsm-drawer__tabs {
+  display: flex;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.adsm-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--color-background);
+}
+
+.adsm-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.adsm-close:hover {
+  background: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
   .adsm-drawer {
-    border-left-width: 3px;
+    width: 100%;
+    max-width: 100%;
   }
   
-  .adsm-drawer-header,
   .adsm-drawer-tabs {
-    border-bottom-width: 2px;
+    top: 65px; /* Adjust for mobile header */
   }
   
-  .adsm-section,
-  .adsm-drawer-json,
-  .adsm-drawer-notes,
-  .adsm-drawer-props-spec {
-    border-width: 3px;
-  }
-  
-  .adsm-input,
-  .adsm-select,
-  .adsm-textarea {
-    border-width: 2px;
-  }
-  
-  .adsm-input:focus,
-  .adsm-select:focus,
-  .adsm-textarea:focus {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  .adsm-drawer-metadata-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-/* Dark theme specific adjustments */
+/* Dark Theme Enhancements */
 @media (prefers-color-scheme: dark) {
+  .adsm-drawer {
+    box-shadow: -2px 0 16px rgba(0, 0, 0, 0.4);
+  }
+  
   .adsm-drawer-backdrop {
     background: rgba(0, 0, 0, 0.7);
   }
 }
 
-/* Print styles - hide drawer */
-@media print {
-  .adsm-drawer-backdrop,
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
   .adsm-drawer {
-    display: none !important;
+    border-left-width: 2px;
+  }
+  
+  .adsm-drawer-tabs .adsm-tab[aria-selected="true"] {
+    border-bottom-width: 3px;
+  }
+  
+  .adsm-drawer-tag,
+  .adsm-drawer-dependency {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .adsm-drawer,
+  .adsm-drawer-backdrop,
+  .adsm-drawer-close,
+  .adsm-drawer-tabs .adsm-tab,
+  .adsm-drawer-tag,
+  .adsm-drawer-dependency {
+    transition: none;
   }
 }

@@ -12,7 +12,7 @@ function ComponentCard({ item, onItemClick }: {
   item: DsComponent; 
   onItemClick?: (id: string, buttonRef?: HTMLElement) => void; 
 }) {
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const buttonRef = React.useRef<HTMLElement>(null);
   
   // Safe item access with fallbacks
   const safeItem = {
@@ -59,9 +59,9 @@ function ComponentCard({ item, onItemClick }: {
   }, [safeItem.id]);
 
   const levelIcons: Record<string, string> = {
-    atom: '⚛️',
-    molecule: '🧬',
-    organism: '🦠'
+    atom: '⚛',
+    molecule: 'M',
+    organism: 'O'
   };
 
   const statusColors: Record<string, string> = {
@@ -81,43 +81,44 @@ function ComponentCard({ item, onItemClick }: {
   }, [handleClick]);
 
   return (
-    <article className="component-card">
-      <button
-        ref={buttonRef}
-        className="component-card-button"
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        aria-label={`Open ${safeItem.name} component details`}
-        style={{
-          width: '100%',
-          background: 'var(--color-panel)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '10px',
-          padding: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          position: 'relative',
-          textAlign: 'left'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-accent)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-border)';
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-accent)';
-          e.currentTarget.style.boxShadow = '0 0 0 2px rgba(59,130,246,0.2)';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-border)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      >
+    <article 
+      className="component-card"
+      role="button"
+      tabIndex={0}
+      ref={buttonRef}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      aria-label={`Open ${safeItem.name} component details`}
+      style={{
+        width: '100%',
+        background: 'var(--color-panel)',
+        border: '1px solid var(--color-border)',
+        borderRadius: '10px',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+        textAlign: 'left'
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = 'var(--color-accent)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = 'var(--color-border)';
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = 'var(--color-accent)';
+        e.currentTarget.style.boxShadow = '0 0 0 2px rgba(59,130,246,0.2)';
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.borderColor = 'var(--color-border)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
         {/* Thumbnail Preview */}
         {thumbnail && (
           <div style={{
@@ -172,7 +173,7 @@ function ComponentCard({ item, onItemClick }: {
             gap: '8px'
           }}>
             <span style={{ fontSize: '20px' }}>
-              {levelIcons[safeItem.level] || '⚛️'}
+              {levelIcons[safeItem.level] || '⚛'}
             </span>
             <h3 style={{ 
               margin: 0, 
@@ -269,7 +270,6 @@ function ComponentCard({ item, onItemClick }: {
             })}
           </div>
         )}
-      </button>
     </article>
   );
 }
@@ -288,7 +288,7 @@ export function ComponentsGrid({ items, onItemClick }: ComponentsGridProps) {
         textAlign: 'center'
       }}>
         <div>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📦</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>□</div>
           <div style={{ fontSize: '18px', marginBottom: '8px' }}>No components found</div>
           <div style={{ fontSize: '14px', opacity: 0.7 }}>
             Components will appear here when they're available

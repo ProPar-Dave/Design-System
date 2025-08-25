@@ -1,23 +1,51 @@
 import React from 'react';
-import { toggleTheme, getTheme, type ThemeName } from '../src/theme/themeManager';
+import { applyTheme, getTheme, getResolvedTheme, onThemeChange, type ThemeType } from '../src/theme/themeManager';
 
 export function ThemeToggle() {
-  const [currentTheme, setCurrentTheme] = React.useState<ThemeName>(getTheme);
+  const [currentTheme, setCurrentTheme] = React.useState<ThemeType>(getTheme);
+  const [resolvedTheme, setResolvedTheme] = React.useState<'light' | 'dark'>(getResolvedTheme);
 
   React.useEffect(() => {
-    const handleThemeChange = (e: CustomEvent) => {
-      setCurrentTheme(e.detail.theme as ThemeName);
-    };
+    const unsubscribe = onThemeChange((theme, resolved) => {
+      setCurrentTheme(theme);
+      setResolvedTheme(resolved);
+    });
     
-    document.addEventListener('adsm:theme:changed', handleThemeChange as EventListener);
-    return () => {
-      document.removeEventListener('adsm:theme:changed', handleThemeChange as EventListener);
-    };
+    return unsubscribe;
   }, []);
 
   const handleToggle = () => {
-    const nextTheme = toggleTheme();
-    setCurrentTheme(nextTheme);
+    // Cycle through: light -> dark -> auto -> light
+    let nextTheme: ThemeType;
+    if (currentTheme === 'light') {
+      nextTheme = 'dark';
+    } else if (currentTheme === 'dark') {
+      nextTheme = 'auto';
+    } else {
+      nextTheme = 'light';
+    }
+    
+    applyTheme(nextTheme);
+  };
+
+  const getDisplayText = () => {
+    if (currentTheme === 'auto') {
+      return `Auto (${resolvedTheme === 'dark' ? 'Dark' : 'Light'})`;
+    }
+    return currentTheme === 'dark' ? 'Dark' : 'Light';
+  };
+
+  const getIcon = () => {
+    if (currentTheme === 'auto') {
+      return '🌓'; // Half moon for auto
+    }
+    return resolvedTheme === 'dark' ? '🌙' : '☀️';
+  };
+
+  const getNextThemeText = () => {
+    if (currentTheme === 'light') return 'dark';
+    if (currentTheme === 'dark') return 'auto';
+    return 'light';
   };
 
   return (
@@ -31,10 +59,10 @@ export function ThemeToggle() {
         alignItems: 'center',
         gap: '6px'
       }}
-      title={`Switch to ${currentTheme === 'dark' ? 'light' : 'dark'} theme`}
+      title={`Switch to ${getNextThemeText()} theme`}
     >
-      {currentTheme === 'dark' ? '🌙' : '☀️'}
-      {currentTheme === 'dark' ? 'Dark' : 'Light'}
+      {getIcon()}
+      {getDisplayText()}
     </button>
   );
 }

@@ -1,0 +1,52 @@
+/* Token-based badges and tags with WCAG AA contrast compliance */
+.tag, .badge { 
+  background: color-mix(in srgb, var(--color-panel) 70%, var(--accent) 10%); 
+  color: var(--color-text); 
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.badge--primary, .tag--primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.badge--success, .tag--success {
+  background: color-mix(in srgb, var(--chip-success-bg) 90%, var(--color-background));
+  color: var(--chip-success-text);
+  border-color: var(--chip-success-border);
+}
+
+.badge--warning, .tag--warning {
+  background: color-mix(in srgb, var(--chip-warning-bg) 90%, var(--color-background));
+  color: var(--chip-warning-text);
+  border-color: var(--chip-warning-border);
+}
+
+.badge--error, .tag--error {
+  background: color-mix(in srgb, var(--chip-danger-bg) 90%, var(--color-background));
+  color: var(--chip-danger-text);
+  border-color: var(--chip-danger-border);
+}
+
+/* Enhanced variants for backward compatibility */
+.adsm-badge, .adsm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-accent);
+  color: var(--color-text);
+}

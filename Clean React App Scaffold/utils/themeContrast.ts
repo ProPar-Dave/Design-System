@@ -80,13 +80,16 @@ function getRelativeLuminance(color: ColorRGB): number {
 
 /**
  * Calculate contrast ratio between two colors
+ * @deprecated Use contrastRatio from themeManager instead
  */
 export function calculateContrastRatio(color1: string, color2: string): number {
   const rgb1 = parseColor(color1);
   const rgb2 = parseColor(color2);
   
   if (!rgb1 || !rgb2) {
-    console.warn('Failed to parse colors for contrast calculation:', color1, color2);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Failed to parse colors for contrast calculation:', color1, color2);
+    }
     return 1; // Worst case
   }
   
@@ -165,7 +168,9 @@ export function ensureThemeContrast(): boolean {
   const isLightTheme = diagnostics.theme === 'light';
   let correctionMade = false;
   
-  console.log('Theme contrast diagnostics:', diagnostics);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Theme contrast diagnostics:', diagnostics);
+  }
   
   // Check text contrast
   if (!diagnostics.passes['text-on-background']) {
@@ -176,7 +181,9 @@ export function ensureThemeContrast(): boolean {
     document.documentElement.style.setProperty('--color-text', safeText);
     document.documentElement.style.setProperty('--color-foreground', safeText);
     
-    console.log(`Auto-corrected text color to ${safeText} for ${diagnostics.theme} theme`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Auto-corrected text color to ${safeText} for ${diagnostics.theme} theme`);
+    }
     correctionMade = true;
   }
   
@@ -189,14 +196,18 @@ export function ensureThemeContrast(): boolean {
     document.documentElement.style.setProperty('--color-background', safeBackground);
     document.documentElement.style.setProperty('--background', safeBackground);
     
-    console.log(`Auto-corrected background color to ${safeBackground} for ${diagnostics.theme} theme`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Auto-corrected background color to ${safeBackground} for ${diagnostics.theme} theme`);
+    }
     correctionMade = true;
   }
   
   if (correctionMade) {
     // Re-run diagnostics to verify fix
     const updatedDiagnostics = getThemeContrastDiagnostics();
-    console.log('Updated contrast diagnostics:', updatedDiagnostics);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Updated contrast diagnostics:', updatedDiagnostics);
+    }
     
     // Dispatch event for diagnostics to pick up
     document.dispatchEvent(new CustomEvent('adsm:theme:contrast-corrected', {
@@ -207,17 +218,4 @@ export function ensureThemeContrast(): boolean {
   return correctionMade;
 }
 
-/**
- * Make this available globally for debugging
- */
-declare global {
-  interface Window {
-    __adsmContrast: (fg: string, bg: string) => number;
-    __adsmThemeCheck: () => any;
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.__adsmContrast = calculateContrastRatio;
-  window.__adsmThemeCheck = getThemeContrastDiagnostics;
-}
+// No more window globals - use centralized themeManager functions instead

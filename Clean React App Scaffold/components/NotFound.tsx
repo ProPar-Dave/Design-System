@@ -1,4 +1,5 @@
 import React from 'react';
+import { navigateTo } from '../src/router/index';
 
 export default function NotFound() {
   const handleGoHome = () => {
@@ -93,27 +94,7 @@ export default function NotFound() {
             Go Back
           </button>
           
-          <button
-            onClick={handleGoHome}
-            style={{
-              background: 'transparent',
-              color: 'var(--color-text)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'var(--color-muted)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            Go Home
-          </button>
+          <button className="adsm-btn adsm-btn-secondary" onClick={()=>navigateTo('overview')}>Go Home</button>
         </div>
         
         <div style={{
@@ -128,11 +109,11 @@ export default function NotFound() {
             Quick Navigation:
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <a href="#/" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Overview</a>
-            <a href="#/guidelines" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Guidelines</a>
-            <a href="#/tokens" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Tokens</a>
-            <a href="#/components" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Components</a>
-            <a href="#/releases" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Releases</a>
+            <a href="#/overview" onClick={(e)=>{e.preventDefault(); navigateTo('overview')}}>Overview</a>
+            <a href="#/guidelines" onClick={(e)=>{e.preventDefault(); navigateTo('guidelines')}}>Guidelines</a>
+            <a href="#/tokens" onClick={(e)=>{e.preventDefault(); navigateTo('tokens')}}>Tokens</a>
+            <a href="#/components" onClick={(e)=>{e.preventDefault(); navigateTo('components')}}>Components</a>
+            <a href="#/releases" onClick={(e)=>{e.preventDefault(); navigateTo('releases')}}>Releases</a>
           </div>
         </div>
       </div>

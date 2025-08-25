@@ -1,4 +1,4 @@
-import { navigate } from './router';
+import { navigate } from '../src/router/hashUtils';
 
 export interface CommandAction {
   id: string;
@@ -18,7 +18,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'System overview and metrics',
       keywords: ['overview', 'home', 'dashboard', 'metrics'],
       section: 'Navigation',
-      perform: () => navigate('overview')
+      perform: () => navigate('#/')
     },
     {
       id: 'nav-guidelines',
@@ -26,7 +26,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'Design system guidelines and documentation',
       keywords: ['guidelines', 'docs', 'documentation', 'rules'],
       section: 'Navigation',
-      perform: () => navigate('guidelines')
+      perform: () => navigate('#/guidelines')
     },
     {
       id: 'nav-tokens',
@@ -34,7 +34,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'View and edit design tokens',
       keywords: ['tokens', 'design', 'variables', 'colors', 'typography'],
       section: 'Navigation',
-      perform: () => navigate('tokens')
+      perform: () => navigate('#/tokens')
     },
     {
       id: 'nav-components',
@@ -42,7 +42,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'Component catalog and documentation',
       keywords: ['components', 'catalog', 'library', 'ui'],
       section: 'Navigation',
-      perform: () => navigate('components')
+      perform: () => navigate('#/components')
     },
     {
       id: 'nav-mini-layouts',
@@ -50,7 +50,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'Atomic composition demos with accessibility testing',
       keywords: ['mini', 'layouts', 'demos', 'composition', 'atoms', 'molecules', 'accessibility'],
       section: 'Navigation',
-      perform: () => navigate('mini-layouts')
+      perform: () => navigate('#/mini-layouts')
     },
     {
       id: 'nav-diagnostics',
@@ -58,7 +58,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'System health and performance metrics',
       keywords: ['diagnostics', 'health', 'performance', 'audit', 'analysis'],
       section: 'Navigation',
-      perform: () => navigate('diagnostics')
+      perform: () => navigate('#/diagnostics')
     },
     {
       id: 'nav-releases',
@@ -66,7 +66,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       subtitle: 'Version history and release management',
       keywords: ['releases', 'versions', 'changelog', 'history'],
       section: 'Navigation',
-      perform: () => navigate('releases')
+      perform: () => navigate('#/releases')
     },
 
     // Quick actions
@@ -77,7 +77,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       keywords: ['new', 'create', 'component', 'add'],
       section: 'Actions',
       perform: () => {
-        navigate('components');
+        navigate('#/components');
         // Trigger new component wizard
         setTimeout(() => {
           const event = new CustomEvent('open-component-wizard');
@@ -103,7 +103,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       keywords: ['export', 'tokens', 'json', 'download'],
       section: 'Actions',
       perform: () => {
-        navigate('tokens');
+        navigate('#/tokens');
         setTimeout(() => {
           const event = new CustomEvent('export-tokens');
           window.dispatchEvent(event);
@@ -117,7 +117,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       keywords: ['run', 'diagnostics', 'audit', 'check', 'analyze'],
       section: 'Actions',
       perform: () => {
-        navigate('diagnostics');
+        navigate('#/diagnostics');
         setTimeout(() => {
           const event = new CustomEvent('run-diagnostics');
           window.dispatchEvent(event);
@@ -131,7 +131,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       keywords: ['accessibility', 'a11y', 'audit', 'compliance', 'wcag'],
       section: 'Actions',
       perform: () => {
-        navigate('mini-layouts');
+        navigate('#/mini-layouts');
         setTimeout(() => {
           console.log('Running accessibility audit on mini layouts...');
         }, 100);
@@ -144,7 +144,7 @@ export function createCommandPaletteActions(): CommandAction[] {
       keywords: ['contrast', 'color', 'accessibility', 'aa', 'aaa'],
       section: 'Actions',
       perform: () => {
-        navigate('mini-layouts');
+        navigate('#/mini-layouts');
         setTimeout(() => {
           console.log('Running contrast checks...');
         }, 100);

@@ -1,0 +1,48 @@
+/* Token-based form inputs with WCAG AA contrast compliance */
+.input, .select { 
+  background: var(--input-bg); 
+  color: var(--input-text); 
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input::placeholder { 
+  color: color-mix(in srgb, var(--input-text) 50%, transparent); 
+}
+
+.input:focus, .select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.input:disabled, .select:disabled {
+  background: color-mix(in srgb, var(--color-muted) 10%, transparent);
+  color: var(--color-muted-foreground);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Enhanced focus for accessibility */\n.input:focus, .select:focus, .textarea:focus {\n  outline: 2px solid var(--focus-ring);\n  outline-offset: 2px;\n}\n\n/* Enhanced variants for backward compatibility */
+.adsm-input-enhanced,
+.adsm-select-enhanced,
+.adsm-textarea-enhanced {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.adsm-textarea-enhanced::placeholder {
+  color: color-mix(in srgb, var(--input-text) 55%, transparent);
+}

@@ -80,6 +80,14 @@ export function PreviewPane({ id, props = {}, className, style }: PreviewPanePro
     );
   }
 
+  if (!entry.render || typeof entry.render !== 'function') {
+    return (
+      <div className={className} style={containerStyle}>
+        <PreviewFallback id={id} reason="No render function available" />
+      </div>
+    );
+  }
+
   return (
     <div className={`adsm-preview-wrap ${className || ''}`} style={containerStyle}>
       <ErrorBoundary 

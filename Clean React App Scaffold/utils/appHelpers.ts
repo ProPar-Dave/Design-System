@@ -4,6 +4,7 @@ import { saveCurrentRoute } from './catalog';
 import { getAppVersion } from '../diagnostics/utils';
 import { safeLogEvent } from '../diagnostics/logger';
 import { ping, pingThemeOperation, pingTokenOperation, initPingSystem } from './ping';
+import { devWarn } from '../src/utils/log';
 
 // Development detection - same logic as ping.ts to ensure consistency
 export function isDevelopment(): boolean {
@@ -39,7 +40,7 @@ export function safeInitPingSystem(): void {
     initPingSystem();
   } catch (error) {
     // Ping system initialization failed - continue without it
-    console.warn('Ping system initialization failed:', error);
+    devWarn('Ping system initialization failed:', error);
   }
 }
 

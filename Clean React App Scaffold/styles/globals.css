@@ -1,10 +1,13 @@
 @custom-variant dark (&:is(.dark *));
 
-/* Import all token files */
+/* Import all token files - order matters for deterministic application */
 @import './tokens/core.css';
 @import './tokens/light-theme.css';
 @import './tokens/dark-theme.css';
 @import './tokens/components.css';
+
+/* IMPORTANT: Theme tokens are applied via themeManager.ts for deterministic behavior */
+/* The CSS files above provide fallbacks but will be overridden by inline styles */
 
 /* Global resets and base styles */
 * {
@@ -27,6 +30,30 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Ensure body uses theme-managed colors for consistent appearance */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scroll lock class for modals/drawers */
+.adsm-no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+/* Boot overlay for app initialization */
+.app-boot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg, #0b1020);
+  color: var(--color-text, #e2e8f0);
+  font-size: 1.1rem;
+  z-index: 9999;
 }
 
 /* Screen reader only content */
@@ -159,6 +186,41 @@ input, textarea, select {
   color: var(--color-text);
 }
 
+/* Layout utility classes */
+.flex { display: flex; }
+.h-screen { height: 100vh; }
+.w-64 { width: 16rem; }
+.flex-1 { flex: 1 1 0%; }
+.overflow-auto { overflow: auto; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.space-y-1 > * + * { margin-top: 0.25rem; }
+.gap-3 { gap: 0.75rem; }
+.mb-8 { margin-bottom: 2rem; }
+.p-6 { padding: 1.5rem; }
+
+/* Theme-aware background classes */
+.bg-background { background-color: var(--color-bg); }
+.bg-sidebar { background-color: var(--color-panel); }
+.bg-sidebar-border { background-color: var(--color-border); }
+.bg-primary { background-color: var(--color-primary); }
+.bg-accent { background-color: var(--color-accent); }
+.border-r { border-right-width: 1px; }
+.border-sidebar-border { border-color: var(--color-border); }
+
+/* Text color classes */
+.text-primary-foreground { color: var(--color-background); }
+.text-sidebar-foreground { color: var(--color-text); }
+.text-accent-foreground { color: var(--color-text); }
+.text-muted-foreground { color: var(--color-muted-foreground); }
+
+/* Hover classes */
+.hover\:bg-accent:hover { background-color: var(--color-accent); }
+.hover\:text-accent-foreground:hover { color: var(--color-text); }
+
+/* Transition classes */
+.transition-colors { transition-property: color, background-color, border-color; transition-duration: 150ms; }
+
 .content {
   padding: var(--space-md);
   max-width: 1200px;
@@ -212,6 +274,9 @@ input, textarea, select {
 }
 
 /* Button classes for atomic system */
+.adsm-btn,
+.adsm-btn-primary,
+.adsm-btn-secondary,
 .adsm-button-primary,
 .adsm-button-secondary {
   display: inline-flex;
@@ -231,20 +296,28 @@ input, textarea, select {
   outline: none;
 }
 
+.adsm-btn,
+.adsm-btn-primary,
 .adsm-button-primary {
   background: var(--button-primary-bg);
   color: var(--button-primary-text);
 }
 
+.adsm-btn:hover:not(:disabled),
+.adsm-btn-primary:hover:not(:disabled),
 .adsm-button-primary:hover:not(:disabled) {
   background: var(--button-primary-hover);
 }
 
+.adsm-btn:active:not(:disabled),
+.adsm-btn-primary:active:not(:disabled),
 .adsm-button-primary:active:not(:disabled) {
   background: var(--button-primary-active);
   transform: translateY(1px);
 }
 
+.adsm-btn:disabled,
+.adsm-btn-primary:disabled,
 .adsm-button-primary:disabled {
   background: var(--button-primary-disabled);
   color: var(--button-primary-disabled-text);
@@ -252,27 +325,93 @@ input, textarea, select {
   opacity: 0.6;
 }
 
+.adsm-btn-secondary,
 .adsm-button-secondary {
   background: var(--button-secondary-bg);
   color: var(--button-secondary-text);
   border: 2px solid var(--button-secondary-border);
 }
 
+.adsm-btn-secondary:hover:not(:disabled),
 .adsm-button-secondary:hover:not(:disabled) {
   background: var(--button-secondary-hover);
 }
 
+.adsm-btn-secondary:active:not(:disabled),
 .adsm-button-secondary:active:not(:disabled) {
   background: var(--button-secondary-active);
   transform: translateY(1px);
 }
 
+.adsm-btn-secondary:disabled,
 .adsm-button-secondary:disabled {
   background: var(--button-secondary-disabled);
   color: var(--button-secondary-disabled-text);
   border-color: var(--button-secondary-disabled);
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* Input and select styles for atomic system */
+.adsm-input,
+.adsm-select {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--input-background);
+  color: var(--color-text);
+  font-size: inherit;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  min-height: var(--touch-target-md);
+  outline: none;
+}
+
+.adsm-input:focus,
+.adsm-select:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 1px var(--color-ring);
+}
+
+.adsm-input:disabled,
+.adsm-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.adsm-select {
+  cursor: pointer;
+}
+
+/* Enhanced input style for token editing */
+.adsm-input-enhanced {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: inherit;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  min-height: var(--touch-target-md);
+  outline: none;
+  width: 100%;
+}
+
+.adsm-input-enhanced:focus {
+  border-color: var(--color-focus-ring);
+  box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.adsm-input-enhanced:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Tab styles for diagnostics */
@@ -301,6 +440,9 @@ textarea:focus-visible,
 
 /* High contrast mode improvements */
 @media (prefers-contrast: high) {
+  .adsm-btn,
+  .adsm-btn-primary,
+  .adsm-btn-secondary,
   .adsm-button-primary,
   .adsm-button-secondary {
     border: 2px solid currentColor;
@@ -411,6 +553,81 @@ textarea:focus-visible,
   z-index: 9998;
   pointer-events: none;
   user-select: none;
+}
+
+/* Contrast warning banner for development mode */
+.adsm-debug .contrast-warning {
+  position: fixed;
+  top: 50px;
+  left: var(--space-sm);
+  right: var(--space-sm);
+  padding: var(--space-sm);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-text);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  z-index: 9997;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Token editor styling */
+.tokens-grid {
+  display: grid;
+  gap: var(--space-3, 12px);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.token-cell {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+}
+
+.token-name { 
+  color: var(--color-muted); 
+  font-size: 12px; 
+}
+
+.token-cell input {
+  background: var(--input-bg, var(--color-bg));
+  color: var(--input-text, var(--color-text));
+  border: 1px solid var(--input-border, var(--color-border));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.token-field {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+}
+
+/* Component card styling for drawer interaction */
+.comp-card {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 10px);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.comp-card:hover {
+  background: var(--color-accent);
+  border-color: var(--color-primary);
+}
+
+.comp-card:focus-visible { 
+  outline: 2px solid var(--color-focus-ring, #60A5FA); 
+  outline-offset: 2px; 
 }
 
 /* Override any hardcoded colors in debug contexts to prevent theme leakage */

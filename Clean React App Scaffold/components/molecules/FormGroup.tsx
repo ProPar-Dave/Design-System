@@ -3,14 +3,17 @@ import { FieldRow, FieldRowProps } from './FieldRow';
 
 export interface FormGroupProps {
   legend?: string;
-  fields: FieldRowProps[];
+  title?: string;  // Alternative to legend
+  description?: string;  // Additional description text
+  fields?: FieldRowProps[];  // Optional - can use children instead
+  children?: React.ReactNode;  // Alternative to fields prop
   columns?: 1 | 2 | 3;
   disabled?: boolean;
   className?: string;
 }
 
 export const FormGroup = React.forwardRef<HTMLFieldSetElement, FormGroupProps>(
-  ({ legend, fields, columns = 1, disabled = false, className = '', ...props }, ref) => {
+  ({ legend, title, description, fields, children, columns = 1, disabled = false, className = '', ...props }, ref) => {
     
     // Layout styles using only tokens
     const fieldsetStyles = {
@@ -61,13 +64,27 @@ export const FormGroup = React.forwardRef<HTMLFieldSetElement, FormGroupProps>(
         disabled={disabled}
         {...props}
       >
-        {legend && (
+        {(legend || title) && (
           <legend 
             className="molecule-form-group__legend" 
             style={legendStyles}
           >
-            {legend}
+            {legend || title}
           </legend>
+        )}
+        
+        {description && (
+          <div 
+            className="molecule-form-group__description"
+            style={{
+              fontSize: 'var(--font-size-sm, 14px)',
+              color: 'var(--color-muted-foreground)',
+              marginBottom: 'var(--space-md, 16px)',
+              lineHeight: 'var(--line-height-normal, 1.5)',
+            }}
+          >
+            {description}
+          </div>
         )}
 
         <div 
@@ -82,13 +99,17 @@ export const FormGroup = React.forwardRef<HTMLFieldSetElement, FormGroupProps>(
             } as any),
           }}
         >
-          {fields.map((fieldProps, index) => (
-            <FieldRow
-              key={fieldProps.id || `field-${index}`}
-              disabled={disabled || fieldProps.disabled}
-              {...fieldProps}
-            />
-          ))}
+          {fields && Array.isArray(fields) ? (
+            fields.map((fieldProps, index) => (
+              <FieldRow
+                key={fieldProps.id || `field-${index}`}
+                disabled={disabled || fieldProps.disabled}
+                {...fieldProps}
+              />
+            ))
+          ) : (
+            children
+          )}
         </div>
       </fieldset>
     );

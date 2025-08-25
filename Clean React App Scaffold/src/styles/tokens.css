@@ -1,0 +1,110 @@
+/* 
+ * TOKENS ONLY - No presentation rules
+ * Pure design token definitions for atomic design system
+ */
+
+/* Root fallback defaults; runtime store will override on .adsm-ui */
+:root {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
+  --font-size: 16px;
+  --focus-ring: #3b82f6;
+
+  /* Spacing scale */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+
+  /* Typography scale */
+  --text-xs: 0.75rem;   /* 12px */
+  --text-sm: 0.875rem;  /* 14px */
+  --text-base: 1rem;    /* 16px */
+  --text-lg: 1.125rem;  /* 18px */
+  --text-xl: 1.25rem;   /* 20px */
+  --text-2xl: 1.5rem;   /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+
+  /* Font weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Border radius */
+  --radius-sm: 0.125rem;  /* 2px */
+  --radius-md: 0.25rem;   /* 4px */
+  --radius-lg: 0.5rem;    /* 8px */
+  --radius-xl: 0.75rem;   /* 12px */
+  --radius-full: 9999px;
+
+  /* Touch targets */
+  --touch-sm: 2rem;     /* 32px */
+  --touch-md: 2.75rem;  /* 44px */
+  --touch-lg: 3rem;     /* 48px */
+
+  /* Surface elevation */
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --elevation-3: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Theme tokens applied via themeManager.ts */
+/* Light theme values */
+[data-theme="light"] {
+  --surface-bg: #ffffff;
+  --surface-panel: #f8fafc;
+  --surface-accent: #f1f5f9;
+  --surface-muted: #e2e8f0;
+  
+  --text-primary: #0B1020;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+  
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-strong: #94a3b8;
+  
+  --state-info: #3b82f6;
+  --state-success: #10b981;
+  --state-warning: #f59e0b;
+  --state-danger: #ef4444;
+  
+  --interactive-primary: #0B1020;
+  --interactive-secondary: #f8fafc;
+  --interactive-accent: #3b82f6;
+}
+
+/* Dark theme values */
+[data-theme="dark"] {
+  --surface-bg: #0B1020;
+  --surface-panel: #0F162E;
+  --surface-accent: #1E293B;
+  --surface-muted: #334155;
+  
+  --text-primary: #E2E8F0;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #0B1020;
+  
+  --border-light: #334155;
+  --border-medium: #475569;
+  --border-strong: #64748b;
+  
+  --state-info: #60A5FA;
+  --state-success: #34D399;
+  --state-warning: #FBBF24;
+  --state-danger: #F87171;
+  
+  --interactive-primary: #E2E8F0;
+  --interactive-secondary: #1E293B;
+  --interactive-accent: #60A5FA;
+}

@@ -23,8 +23,14 @@ export function Drawer({
 
   // Lock scroll when open
   React.useEffect(() => {
-    document.documentElement.classList.toggle('adsm-no-scroll', open);
-    document.body.classList.toggle('adsm-no-scroll', open);
+    if (open) {
+      document.documentElement.classList.add('adsm-no-scroll');
+      document.body.classList.add('adsm-no-scroll');
+    } else {
+      document.documentElement.classList.remove('adsm-no-scroll');
+      document.body.classList.remove('adsm-no-scroll');
+    }
+    
     return () => { 
       document.documentElement.classList.remove('adsm-no-scroll'); 
       document.body.classList.remove('adsm-no-scroll'); 
@@ -87,10 +93,17 @@ export function Drawer({
   };
 
   return (
-    <div className="adsm-drawer" {...{open: open || undefined}} role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <>
+      {/* Backdrop */}
       <div className="adsm-drawer__backdrop" onClick={onClose} />
+      
+      {/* Drawer Panel */}
       <div 
-        className="adsm-drawer__panel" 
+        className="adsm-drawer" 
+        open={open || undefined}
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="drawer-title"
         tabIndex={-1} 
         ref={panelRef} 
         data-drawer="panel"
@@ -128,7 +141,7 @@ export function Drawer({
                 alignItems: 'center', 
                 gap: '8px', 
                 fontSize: '11px',
-                color: 'var(--color-muted)',
+                color: 'var(--color-muted-foreground)',
                 marginTop: '2px'
               }}>
                 <span>v{safeItem.version}</span>
@@ -147,7 +160,7 @@ export function Drawer({
           <button 
             className="adsm-close" 
             onClick={onClose} 
-            aria-label="Close drawer"
+            aria-label="Close component details drawer"
             title="Close (Escape)"
           >
             ✕
@@ -159,9 +172,11 @@ export function Drawer({
           {TABS.map((t) => (
             <button 
               key={t} 
+              id={`drawer-tab-${t.toLowerCase()}`}
               role="tab" 
               className="adsm-tab" 
               aria-selected={tab === t} 
+              aria-controls={`drawer-panel-${t.toLowerCase()}`}
               onClick={() => setTab(t)}
               tabIndex={tab === t ? 0 : -1}
             >
@@ -171,52 +186,166 @@ export function Drawer({
         </div>
 
         {/* Body */}
-        <div className="adsm-drawer__body" ref={bodyRef} role="tabpanel" aria-labelledby="drawer-title">
-          {tab === 'Preview' && (
-            <div className="adsm-section">
-              <div className="adsm-preview-placeholder">
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>👁️</div>
-                <div>Live Preview</div>
-                <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                  Preview functionality coming soon
+        <div className="adsm-drawer__body" ref={bodyRef}>
+          {/* Preview Panel */}
+          <div 
+            id="drawer-panel-preview"
+            role="tabpanel" 
+            aria-labelledby="drawer-tab-preview"
+            hidden={tab !== 'Preview'}
+          >
+            {tab === 'Preview' && (
+              <div className="adsm-section">
+                <div className="adsm-preview-placeholder">
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>👁️</div>
+                  <div>Live Preview</div>
+                  <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
+                    Preview functionality coming soon
+                  </div>
                 </div>
+                
+                {safeItem.description && (
+                  <div className="adsm-content">
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: '12px', 
+                      fontWeight: '600', 
+                      color: 'var(--color-muted-foreground)', 
+                      marginBottom: '8px' 
+                    }}>
+                      Description
+                    </label>
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                      {safeItem.description}
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              {safeItem.description && (
+            )}
+          </div>
+
+          {/* Notes Panel */}
+          <div 
+            id="drawer-panel-notes"
+            role="tabpanel" 
+            aria-labelledby="drawer-tab-notes"
+            hidden={tab !== 'Notes'}
+          >
+            {tab === 'Notes' && (
+              <div className="adsm-section">
                 <div className="adsm-content">
                   <label style={{ 
                     display: 'block', 
                     fontSize: '12px', 
                     fontWeight: '600', 
-                    color: 'var(--color-muted)', 
+                    color: 'var(--color-muted-foreground)', 
                     marginBottom: '8px' 
                   }}>
-                    Description
+                    Notes
                   </label>
-                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-                    {safeItem.description}
+                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4, minHeight: '100px' }}>
+                    {safeItem.notes.trim() || (
+                      <div style={{ 
+                        color: 'var(--color-muted-foreground)', 
+                        fontStyle: 'italic',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '80px',
+                        textAlign: 'center'
+                      }}>
+                        <div>
+                          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
+                          <div>No notes added yet.</div>
+                          <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
+                            Click "Edit" to add notes
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
-          {tab === 'Notes' && (
-            <div className="adsm-section">
-              <div className="adsm-content">
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: 'var(--color-muted)', 
-                  marginBottom: '8px' 
-                }}>
-                  Notes
-                </label>
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4, minHeight: '100px' }}>
-                  {safeItem.notes.trim() || (
+          {/* Props Panel */}
+          <div 
+            id="drawer-panel-props"
+            role="tabpanel" 
+            aria-labelledby="drawer-tab-props"
+            hidden={tab !== 'Props'}
+          >
+            {tab === 'Props' && (
+              <div className="adsm-section">
+                <div className="adsm-content">
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: 'var(--color-muted-foreground)', 
+                    marginBottom: '8px' 
+                  }}>
+                    Properties
+                  </label>
+                  {safeItem.propsSpec.length > 0 ? (
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {safeItem.propsSpec.map((prop, index) => (
+                        <div key={index} style={{
+                          padding: '8px',
+                          background: 'var(--color-bg)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '6px'
+                        }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            marginBottom: '4px'
+                          }}>
+                            <code style={{ 
+                              fontSize: '12px', 
+                              fontWeight: '600',
+                              color: 'var(--color-text)'
+                            }}>
+                              {prop.name}
+                            </code>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'var(--color-accent)',
+                              color: 'var(--color-text)'
+                            }}>
+                              {prop.type}
+                            </span>
+                            {prop.required && (
+                              <span style={{
+                                fontSize: '11px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: '#F59E0B',
+                                color: 'white'
+                              }}>
+                                required
+                              </span>
+                            )}
+                          </div>
+                          {prop.description && (
+                            <div style={{
+                              fontSize: '12px',
+                              color: 'var(--color-muted-foreground)',
+                              lineHeight: 1.4
+                            }}>
+                              {prop.description}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
                     <div style={{ 
-                      color: 'var(--color-muted)', 
+                      color: 'var(--color-muted-foreground)', 
                       fontStyle: 'italic',
                       display: 'flex',
                       alignItems: 'center',
@@ -225,129 +354,47 @@ export function Drawer({
                       textAlign: 'center'
                     }}>
                       <div>
-                        <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
-                        <div>No notes added yet.</div>
+                        <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚙️</div>
+                        <div>No properties defined yet.</div>
                         <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                          Click "Edit" to add notes
+                          Click "Edit" to add component properties
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {tab === 'Props' && (
-            <div className="adsm-section">
-              <div className="adsm-content">
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: 'var(--color-muted)', 
-                  marginBottom: '8px' 
-                }}>
-                  Properties
-                </label>
-                {safeItem.propsSpec.length > 0 ? (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {safeItem.propsSpec.map((prop, index) => (
-                      <div key={index} style={{
-                        padding: '8px',
-                        background: 'var(--color-panel)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '6px'
-                      }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          marginBottom: '4px'
-                        }}>
-                          <code style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '600',
-                            color: 'var(--color-text)'
-                          }}>
-                            {prop.name}
-                          </code>
-                          <span style={{
-                            fontSize: '11px',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background: 'var(--color-accent)',
-                            color: 'var(--color-text)'
-                          }}>
-                            {prop.type}
-                          </span>
-                          {prop.required && (
-                            <span style={{
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: '#F59E0B',
-                              color: 'white'
-                            }}>
-                              required
-                            </span>
-                          )}
-                        </div>
-                        {prop.description && (
-                          <div style={{
-                            fontSize: '12px',
-                            color: 'var(--color-muted)',
-                            lineHeight: 1.4
-                          }}>
-                            {prop.description}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ 
-                    color: 'var(--color-muted)', 
-                    fontStyle: 'italic',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '80px',
-                    textAlign: 'center'
+          {/* JSON Panel */}
+          <div 
+            id="drawer-panel-json"
+            role="tabpanel" 
+            aria-labelledby="drawer-tab-json"
+            hidden={tab !== 'JSON'}
+          >
+            {tab === 'JSON' && (
+              <div className="adsm-section">
+                <div className="adsm-content">
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: 'var(--color-muted-foreground)', 
+                    marginBottom: '8px' 
                   }}>
-                    <div>
-                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚙️</div>
-                      <div>No properties defined yet.</div>
-                      <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                        Click "Edit" to add component properties
-                      </div>
-                    </div>
-                  </div>
-                )}
+                    Component Data
+                  </label>
+                  <pre className="adsm-json-viewer">
+                    {JSON.stringify(safeItem, null, 2)}
+                  </pre>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {tab === 'JSON' && (
-            <div className="adsm-section">
-              <div className="adsm-content">
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: 'var(--color-muted)', 
-                  marginBottom: '8px' 
-                }}>
-                  Component Data
-                </label>
-                <pre className="adsm-json-viewer">
-                  {JSON.stringify(safeItem, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-
-          {/* Metadata section */}
+          {/* Metadata section - always visible */}
           <div className="adsm-section">
             {(safeItem.tags.length > 0 || safeItem.dependencies.length > 0) && (
               <>
@@ -357,7 +404,7 @@ export function Drawer({
                       display: 'block', 
                       fontSize: '12px', 
                       fontWeight: '600', 
-                      color: 'var(--color-muted)', 
+                      color: 'var(--color-muted-foreground)', 
                       marginBottom: '6px' 
                     }}>
                       Tags
@@ -376,7 +423,7 @@ export function Drawer({
                       display: 'block', 
                       fontSize: '12px', 
                       fontWeight: '600', 
-                      color: 'var(--color-muted)', 
+                      color: 'var(--color-muted-foreground)', 
                       marginBottom: '6px' 
                     }}>
                       Dependencies
@@ -399,7 +446,7 @@ export function Drawer({
                   display: 'block', 
                   fontSize: '12px', 
                   fontWeight: '600', 
-                  color: 'var(--color-muted)', 
+                  color: 'var(--color-muted-foreground)', 
                   marginBottom: '8px' 
                 }}>
                   Code Snippet
@@ -424,19 +471,16 @@ export function Drawer({
         {/* Footer */}
         <div className="adsm-footer">
           <button 
-            className="adsm-tab" 
+            className="adsm-button" 
             onClick={() => safeItem.id && onEdit(safeItem.id)}
-            style={{
-              background: 'var(--button-bg, var(--color-accent))',
-              color: 'var(--button-fg, var(--color-text))',
-              border: '1px solid var(--button-border, var(--color-border))'
-            }}
+            aria-label={`Edit ${safeItem.name} component`}
           >
             ✏️ Edit
           </button>
           <button 
-            className="adsm-tab" 
+            className="adsm-button" 
             onClick={onClose}
+            aria-label="Close component details drawer"
             style={{
               background: 'transparent',
               color: 'var(--color-text)',
@@ -447,6 +491,6 @@ export function Drawer({
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

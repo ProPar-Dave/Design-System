@@ -100,26 +100,85 @@ function DrawerPreview({ item }: { item: DsComponent }) {
   );
 }
 
+// Invalid component data placeholder
+function InvalidComponentPlaceholder({ onClose }: { onClose: () => void }) {
+  return (
+    <div 
+      className="adsm-drawer-backdrop" 
+      role="presentation" 
+      onClick={onClose}
+    >
+      <aside
+        className="adsm-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invalid-component-title"
+      >
+        <div className="adsm-drawer-header">
+          <h2 id="invalid-component-title">
+            Invalid Component Data
+          </h2>
+          <button 
+            className="adsm-drawer-close"
+            onClick={onClose}
+            aria-label="Close invalid component drawer"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="adsm-drawer-body">
+          <div className="adsm-section">
+            <div style={{
+              textAlign: 'center',
+              padding: '48px 16px',
+              color: 'var(--color-muted-foreground)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+              <h3>Invalid Component Data</h3>
+              <p style={{ marginBottom: '16px' }}>
+                The component data is missing or invalid. Please try selecting a different component.
+              </p>
+              <button 
+                onClick={onClose}
+                className="adsm-button-primary"
+              >
+                Close Drawer
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export function ComponentDrawer({ item, onClose, onEdit, returnRef }: { 
-  item: DsComponent; 
+  item: DsComponent | null | undefined; 
   onClose: () => void; 
   onEdit: () => void;
   returnRef?: React.RefObject<HTMLElement>;
 }) {
-  // Defensive check - if component is invalid, close drawer immediately
+  // Enhanced logging for debugging
   React.useEffect(() => {
-    if (!item || !item.id || !item.name) {
+    console.log('ComponentDrawer: Received item:', item);
+    if (!item) {
       console.error('ComponentDrawer: Invalid component data received', { item });
-      onClose();
-      return;
+    } else if (!item.id || !item.name) {
+      console.error('ComponentDrawer: Component missing required properties', { 
+        item,
+        hasId: !!item.id,
+        hasName: !!item.name
+      });
+    } else {
+      console.log('ComponentDrawer: Valid component received:', {
+        id: item.id,
+        name: item.name,
+        level: item.level,
+        status: item.status
+      });
     }
-  }, [item, onClose]);
-
-  // Early return if component is invalid - prevents render errors
-  if (!item || !item.id || !item.name) {
-    console.warn('ComponentDrawer: Rendering prevented due to invalid component data');
-    return null;
-  }
+  }, [item]);
 
   // Create portal container
   const [portalContainer] = React.useState(() => {
@@ -127,6 +186,15 @@ export function ComponentDrawer({ item, onClose, onEdit, returnRef }: {
     container.className = 'adsm-drawer-portal';
     return container;
   });
+
+  // If component is invalid, show error placeholder
+  if (!item || !item.id || !item.name) {
+    console.warn('ComponentDrawer: Rendering invalid component placeholder');
+    return createPortal(
+      <InvalidComponentPlaceholder onClose={onClose} />,
+      portalContainer
+    );
+  }
 
   // Initialize tab from URL or default to preview
   const initial = (getHashParam('tab') as DrawerTab) || 'preview';

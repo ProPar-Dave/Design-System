@@ -1,0 +1,183 @@
+/* ==============================
+   Atomic DS Manager – Theme Primitives
+   ============================== */
+
+/* 
+Namespace everything under `.adsm-ui`
+so old CSS won't conflict during migration.
+*/
+
+/* Global Token Layer */
+.adsm-ui {
+  --color-bg: var(--adsm-bg, #ffffff);
+  --color-text: var(--adsm-text, #111827);
+  --color-muted: var(--adsm-muted, #6b7280);
+  --color-panel: var(--adsm-panel, #f9fafb);
+  --color-border: var(--adsm-border, #d1d5db);
+  --color-accent: var(--adsm-accent, #3b82f6);
+  --color-success: var(--adsm-success, #10b981);
+  --color-warning: var(--adsm-warning, #f59e0b);
+  --color-danger: var(--adsm-danger, #ef4444);
+
+  /* Typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+
+  /* Spacing + Radius */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+/* Dark Theme Override */
+.adsm-ui[data-theme="dark"] {
+  --color-bg: #0b1020;
+  --color-text: #e2e8f0;
+  --color-muted: #94a3b8;
+  --color-panel: #0f162e;
+  --color-border: #1e293b;
+  --color-accent: #3b82f6;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+}
+
+/* ==============================
+   Primitive Utilities
+   ============================== */
+
+.adsm-ui {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size);
+  line-height: 1.45;
+}
+
+/* Panels */
+.adsm-panel {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* Text */
+.adsm-text-muted {
+  color: var(--color-muted);
+}
+.adsm-text-accent {
+  color: var(--color-accent);
+}
+.adsm-text-danger {
+  color: var(--color-danger);
+}
+
+/* Buttons */
+.adsm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.adsm-btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-bg);
+}
+.adsm-btn-primary:hover {
+  /* subtle darken without hardcoding a color */
+  filter: brightness(0.92);
+}
+
+.adsm-btn-secondary {
+  background: var(--color-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.adsm-btn-secondary:hover {
+  background: var(--color-accent);
+}
+
+.adsm-btn-danger {
+  background: var(--color-danger);
+  color: var(--btn-danger-text, #fff);
+}
+.adsm-btn-danger:hover {
+  filter: brightness(0.92);
+}
+
+.adsm-btn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Cards */
+.adsm-card {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: transform 0.15s ease;
+}
+.adsm-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Layout helpers */
+.adsm-container { padding: var(--space-4); }
+.adsm-grid { display: grid; gap: var(--space-4); }
+.adsm-stack > * + * { margin-top: var(--space-3); }
+
+/* Form rows used in TokensPage */
+.row { display:flex; align-items:center; gap: var(--space-3); margin: var(--space-2) 0; }
+.row > span { width: 220px; color: var(--color-muted); font-size: 0.9em; }
+.actions { display:flex; gap: var(--space-3); margin-top: var(--space-3); }
+
+/* ==============================
+   App-wide Rhythm & Token Application
+   ============================== */
+
+/* app-wide rhythm; safe to append anywhere in your global/primitives css */
+.adsm-ui {
+  font-size: var(--font-size);
+  line-height: 1.45;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.adsm-panel { background: var(--color-panel); border:1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
+
+.adsm-card  { background: var(--color-panel); border:1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-4); }
+
+.adsm-input { background: var(--input-bg); color: var(--input-text); border:1px solid var(--input-border);
+  border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+
+.adsm-btn    { border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+.adsm-btn-primary   { background: var(--btn-primary-bg); color: var(--btn-primary-text); border:1px solid var(--btn-primary-bg); }
+.adsm-btn-secondary { background: var(--color-panel); color: var(--color-text); border:1px solid var(--color-border); }
+.adsm-btn-danger    { background: var(--color-danger, #ef4444); color: var(--btn-danger-text, #0b1020); border:1px solid var(--color-danger, #ef4444); }
+
+.adsm-grid { display:grid; gap: var(--space-4); }
+.adsm-stack > * + * { margin-top: var(--space-3); }
+
+/* Typography token application */
+h1 { font-size: calc(var(--font-size) * 1.75); }
+h2 { font-size: calc(var(--font-size) * 1.375); }
+p.muted { color: var(--color-muted); }

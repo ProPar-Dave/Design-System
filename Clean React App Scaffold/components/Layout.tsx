@@ -1,108 +1,74 @@
 import React from 'react';
-import { ThemeToggle } from './ThemeToggle';
-import { 
-  Home, 
-  FileText, 
-  Palette, 
-  Grid3X3, 
-  Activity, 
-  Package,
-  Layers,
-  ChevronRight 
-} from 'lucide-react';
-import { getCurrentRoute, navigate } from '../utils/router';
+import { getCurrentRoute, navigateTo } from '../src/router/index';
 
-interface NavItemProps {
-  icon: React.ReactNode;
+interface NavigationItem {
+  id: string;
   label: string;
-  route: string;
-  isActive?: boolean;
-  onClick?: () => void;
+  href: string;
+  icon?: string;
 }
 
-function NavItem({ icon, label, route, isActive, onClick }: NavItemProps) {
-  const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      navigate(route);
-    }
-  };
+const navigationItems: NavigationItem[] = [
+  { id: 'overview', label: 'Overview', href: '#/overview', icon: '📊' },
+  { id: 'guidelines', label: 'Guidelines', href: '#/guidelines', icon: '📋' },
+  { id: 'tokens', label: 'Tokens', href: '#/tokens', icon: '🎨' },
+  { id: 'components', label: 'Components', href: '#/components', icon: '🧩' },
+  { id: 'mini-layouts', label: 'Mini Layouts', href: '#/mini-layouts', icon: '📱' },
+  { id: 'diagnostics', label: 'Diagnostics', href: '#/diagnostics', icon: '🔧' },
+  { id: 'releases', label: 'Releases', href: '#/releases', icon: '🚀' }
+];
+
+export function Layout({ children }: { children: React.ReactNode }) {
+  const [active, setActive] = React.useState<string>(getCurrentRoute());
+  React.useEffect(()=>{
+    const onRoute = (e: any)=> setActive(e?.detail?.route ?? getCurrentRoute());
+    addEventListener('adsm:route-change', onRoute);
+    return ()=> removeEventListener('adsm:route-change', onRoute);
+  },[]);
 
   return (
-    <button
-      onClick={handleClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-accent ${
-        isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
-      }`}
-      role="menuitem"
-    >
-      <span className="flex-shrink-0">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {isActive && <ChevronRight className="w-4 h-4 flex-shrink-0" />}
-    </button>
-  );
-}
-
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export function Layout({ children }: LayoutProps) {
-  const currentRoute = getCurrentRoute();
-
-  const navigationItems = [
-    { icon: <Home className="w-4 h-4" />, label: 'Overview', route: 'overview' },
-    { icon: <FileText className="w-4 h-4" />, label: 'Guidelines', route: 'guidelines' },
-    { icon: <Palette className="w-4 h-4" />, label: 'Tokens', route: 'tokens' },
-    { icon: <Grid3X3 className="w-4 h-4" />, label: 'Components', route: 'components' },
-    { icon: <Layers className="w-4 h-4" />, label: 'Mini Layouts', route: 'mini-layouts' },
-    { icon: <Activity className="w-4 h-4" />, label: 'Diagnostics', route: 'diagnostics' },
-    { icon: <Package className="w-4 h-4" />, label: 'Releases', route: 'releases' }
-  ];
-
-  return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside 
-        className="w-64 border-r bg-card flex flex-col"
-        role="navigation"
-        aria-label="Main navigation"
-      >
-        {/* Header */}
-        <div className="p-6 border-b">
-          <h1 className="text-xl font-semibold">Atomic DS Manager</h1>
-          <p className="text-sm text-muted-foreground mt-1">Design System Toolkit</p>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4" role="menu">
-          <div className="space-y-1">
-            {navigationItems.map((item) => (
-              <NavItem
-                key={item.route}
-                icon={item.icon}
-                label={item.label}
-                route={item.route}
-                isActive={currentRoute === item.route}
-              />
-            ))}
+    <div className="adsm-layout flex h-screen bg-background">
+      <aside className="adsm-sidebar w-64 bg-sidebar border-r border-sidebar-border">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">A</span>
+            </div>
+            <div>
+              <h1 className="font-semibold text-sidebar-foreground">Atomic DS Manager</h1>
+              <p className="text-xs text-muted-foreground">Design System Tools</p>
+            </div>
           </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Theme</span>
-            <ThemeToggle />
-          </div>
+          
+          <nav className="adsm-nav">
+            <ul className="space-y-1">
+              {navigationItems.map((item) => (
+                <li key={item.id}>
+                  <a
+                    className={`side-nav__item flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      active === item.id
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                    href={item.href}
+                    aria-current={active===item.id ? 'page' : undefined}
+                    onClick={(e)=>{ e.preventDefault(); navigateTo(item.id); }}
+                  >
+                    {item.icon && <span className="text-base">{item.icon}</span>}
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {children}
-      </div>
+      
+      <main className="adsm-main flex-1 overflow-auto">
+        <div className="adsm-content">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

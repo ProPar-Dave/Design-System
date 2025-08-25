@@ -1,5 +1,6 @@
 import React from 'react';
 import { rank } from '../utils/fuzzy';
+import { navigate } from '../src/router/hashUtils';
 
 export type Cmd = { id:string; label:string; hint?:string; run:()=>void; group?:string; };
 
@@ -14,17 +15,17 @@ export function useCommands(base: Partial<{
   onToggleTheme: ()=>void;
   onClearLocal: ()=>void;
 }> = {}) {
-  const navigate = (path: string) => () => {
-    window.location.hash = path;
+  const createNavigator = (path: string) => () => {
+    navigate(path as any);
   };
 
   const cmds: Cmd[] = [
-    { id:'go:overview',   label:'Go: Overview',   group:'Navigate', run: navigate('#/') },
-    { id:'go:guidelines', label:'Go: Guidelines', group:'Navigate', run: navigate('#/guidelines') },
-    { id:'go:tokens',     label:'Go: Tokens',     group:'Navigate', run: navigate('#/tokens') },
-    { id:'go:components', label:'Go: Components', group:'Navigate', run: navigate('#/components') },
-    { id:'go:releases',   label:'Go: Releases',   group:'Navigate', run: navigate('#/releases') },
-    { id:'go:diagnostics',label:'Go: Diagnostics',group:'Navigate', run: navigate('#/diagnostics') },
+    { id:'go:overview',   label:'Go: Overview',   group:'Navigate', run: createNavigator('#/') },
+    { id:'go:guidelines', label:'Go: Guidelines', group:'Navigate', run: createNavigator('#/guidelines') },
+    { id:'go:tokens',     label:'Go: Tokens',     group:'Navigate', run: createNavigator('#/tokens') },
+    { id:'go:components', label:'Go: Components', group:'Navigate', run: createNavigator('#/components') },
+    { id:'go:releases',   label:'Go: Releases',   group:'Navigate', run: createNavigator('#/releases') },
+    { id:'go:diagnostics',label:'Go: Diagnostics',group:'Navigate', run: createNavigator('#/diagnostics') },
 
     base.onRescanTokens && { id:'tokens:rescan', label:'Tokens: Re‑scan', group:'Tokens', run: base.onRescanTokens },
     base.onCopyCSS     && { id:'tokens:copycss', label:'Tokens: Copy as CSS', group:'Tokens', run: base.onCopyCSS },
@@ -107,83 +108,47 @@ export function CommandPalette({ commands }: { commands: Cmd[] }) {
       <div 
         className="adsm-modal-content"
         onClick={(e)=>e.stopPropagation()}
-        style={{
-          background: 'var(--modal-content-bg)',
-          border: '2px solid var(--modal-content-border)',
-          maxWidth: '600px',
-          padding: 0
-        }}
       >
-        <div className="adsm-modal-header" style={{borderBottom: '1px solid var(--modal-content-border)'}}>
-          <h2 id="command-palette-title" className="adsm-modal-title" style={{margin: 0}}>
+        <div className="adsm-modal-header">
+          <h2 id="command-palette-title" className="adsm-modal-title">
             Command Palette
           </h2>
         </div>
-        <div style={{padding: '16px', borderBottom: '1px solid var(--modal-content-border)'}}>
+        
+        <div className="cmdp-input-section">
           <input 
             ref={inputRef} 
             value={q} 
             onChange={e=>setQ(e.target.value)} 
             placeholder="Type a command… (Esc to close)"
-            className="adsm-modal-input"
-            style={{
-              background: 'var(--input-bg)',
-              color: 'var(--modal-body-text)',
-              border: '2px solid var(--input-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px 16px',
-              fontSize: '14px',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
+            className="cmdp-input"
             aria-label="Search commands"
           />
         </div>
-        <div className="adsm-modal-body" style={{padding: 0, maxHeight: '320px', overflow: 'auto'}}>
-          <ul role="listbox" aria-label="Command options">
+        
+        <div className="cmdp-results">
+          <ul role="listbox" aria-label="Command options" className="cmdp-list">
             {results.map((c,idx)=> (
               <li key={c.id} role="option" aria-selected={idx === selectedIndex}>
                 <button 
                   onClick={()=>run(c)} 
-                  className="w-full text-left focus:outline-none"
-                  style={{
-                    color: 'var(--modal-body-text)',
-                    background: idx === selectedIndex ? 'var(--color-accent)' : 'transparent',
-                    padding: '12px 20px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    minHeight: '44px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '4px'
-                  }}
+                  className={`cmdp-item ${idx === selectedIndex ? 'cmdp-item-selected' : ''}`}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onFocus={() => setSelectedIndex(idx)}
                   aria-describedby={c.hint ? `hint-${c.id}` : undefined}
+                  aria-selected={idx === selectedIndex}
                 >
-                  <div style={{fontSize: '14px', fontWeight: '500'}}>{c.label}</div>
+                  <div className="cmdp-item-label">{c.label}</div>
                   {c.hint && (
                     <div 
                       id={`hint-${c.id}`}
-                      style={{
-                        fontSize: '12px', 
-                        color: 'var(--modal-description-text)',
-                        lineHeight: '1.4'
-                      }}
+                      className="cmdp-item-hint"
                     >
                       {c.hint}
                     </div>
                   )}
                   {c.group && (
-                    <div style={{
-                      fontSize: '11px', 
-                      color: 'var(--modal-description-text)',
-                      opacity: 0.8,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    <div className="cmdp-item-group">
                       {c.group}
                     </div>
                   )}
@@ -191,32 +156,33 @@ export function CommandPalette({ commands }: { commands: Cmd[] }) {
               </li>
             ))}
             {!results.length && (
-              <li style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: 'var(--modal-description-text)',
-                fontSize: '14px'
-              }}>
+              <li className="cmdp-empty">
                 No commands match your search
               </li>
             )}
           </ul>
         </div>
-        <div className="adsm-modal-footer" style={{
-          padding: '12px 20px',
-          borderTop: '1px solid var(--modal-content-border)',
-          fontSize: '12px',
-          color: 'var(--modal-description-text)',
-          justifyContent: 'center',
-          textAlign: 'center'
-        }}>
-          <div style={{display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center'}}>
-            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>
-              {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'}
-            </kbd> to open</span>
-            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>↑↓</kbd> to navigate</span>
-            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>Enter</kbd> to select</span>
-            <span><kbd style={{background: 'var(--color-muted)', padding: '2px 6px', borderRadius: '4px'}}>Esc</kbd> to close</span>
+        
+        <div className="cmdp-footer">
+          <div className="cmdp-shortcuts">
+            <span className="cmdp-shortcut">
+              <kbd className="cmdp-kbd">
+                {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'}
+              </kbd> 
+              to open
+            </span>
+            <span className="cmdp-shortcut">
+              <kbd className="cmdp-kbd">↑↓</kbd> 
+              to navigate
+            </span>
+            <span className="cmdp-shortcut">
+              <kbd className="cmdp-kbd">Enter</kbd> 
+              to select
+            </span>
+            <span className="cmdp-shortcut">
+              <kbd className="cmdp-kbd">Esc</kbd> 
+              to close
+            </span>
           </div>
         </div>
       </div>

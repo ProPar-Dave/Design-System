@@ -14,7 +14,7 @@ import { Label } from './atoms/Label';
 import { Badge } from './atoms/Badge';
 import { auditLayout, exportAuditResults, type LayoutAuditResult } from '../utils/layoutAudit';
 
-export function MiniLayouts() {
+function MiniLayouts() {
   const [auditResults, setAuditResults] = useState<LayoutAuditResult[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [formData, setFormData] = useState({
@@ -112,35 +112,38 @@ export function MiniLayouts() {
       <div className="space-y-4">
         <h3>Project Settings</h3>
         <FormGroup title="Configuration" description="Manage project configuration settings">
-          <FieldRow>
-            <Label htmlFor="project-name">Project Name</Label>
-            <Input 
-              id="project-name"
-              value="Design System v2"
-              onChange={() => {}}
-            />
-          </FieldRow>
-          <FieldRow>
-            <Label htmlFor="build-target">Build Target</Label>
-            <Select 
-              id="build-target"
-              value="production"
-              onChange={() => {}}
-              options={[
+          <FieldRow
+            label="Project Name"
+            control="input"
+            controlProps={{
+              id: "project-name",
+              value: "Design System v2",
+              onChange: () => {}
+            }}
+          />
+          <FieldRow
+            label="Build Target"
+            control="select"
+            controlProps={{
+              id: "build-target",
+              value: "production",
+              onChange: () => {},
+              options: [
                 { value: 'development', label: 'Development' },
                 { value: 'staging', label: 'Staging' },
                 { value: 'production', label: 'Production' }
-              ]}
-            />
-          </FieldRow>
-          <FieldRow>
-            <Label htmlFor="auto-deploy">Auto Deploy</Label>
-            <Switch 
-              id="auto-deploy"
-              checked={true}
-              onChange={() => {}}
-            />
-          </FieldRow>
+              ]
+            }}
+          />
+          <FieldRow
+            label="Auto Deploy"
+            control="switch"
+            controlProps={{
+              id: "auto-deploy",
+              checked: true,
+              onChange: () => {}
+            }}
+          />
         </FormGroup>
       </div>
     )
@@ -283,52 +286,56 @@ export function MiniLayouts() {
               title="User Settings" 
               description="Manage your account preferences and notification settings"
             >
-              <FieldRow>
-                <Label htmlFor="username">Username</Label>
-                <Input 
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Enter username"
-                />
-              </FieldRow>
+              <FieldRow
+                label="Username"
+                control="input"
+                controlProps={{
+                  id: "username",
+                  value: formData.username,
+                  onChange: (e) => setFormData(prev => ({ ...prev, username: e.target.value })),
+                  placeholder: "Enter username"
+                }}
+              />
               
-              <FieldRow>
-                <Label htmlFor="role">Role</Label>
-                <Select 
-                  id="role"
-                  value={formData.role}
-                  onChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                  options={[
+              <FieldRow
+                label="Role"
+                control="select"
+                controlProps={{
+                  id: "role",
+                  value: formData.role,
+                  onChange: (value) => setFormData(prev => ({ ...prev, role: value })),
+                  options: [
                     { value: 'viewer', label: 'Viewer' },
                     { value: 'editor', label: 'Editor' },
                     { value: 'admin', label: 'Administrator' }
-                  ]}
-                />
-              </FieldRow>
+                  ]
+                }}
+              />
               
-              <FieldRow>
-                <Label htmlFor="notifications">Email Notifications</Label>
-                <Switch 
-                  id="notifications"
-                  checked={formData.notifications}
-                  onChange={(checked) => setFormData(prev => ({ ...prev, notifications: checked }))}
-                />
-              </FieldRow>
+              <FieldRow
+                label="Email Notifications"
+                control="switch"
+                controlProps={{
+                  id: "notifications",
+                  checked: formData.notifications,
+                  onChange: (checked) => setFormData(prev => ({ ...prev, notifications: checked }))
+                }}
+              />
               
-              <FieldRow>
-                <Label htmlFor="theme-select">Theme Preference</Label>
-                <Select 
-                  id="theme-select"
-                  value={formData.theme}
-                  onChange={(value) => setFormData(prev => ({ ...prev, theme: value }))}
-                  options={[
+              <FieldRow
+                label="Theme Preference"
+                control="select"
+                controlProps={{
+                  id: "theme-select",
+                  value: formData.theme,
+                  onChange: (value) => setFormData(prev => ({ ...prev, theme: value })),
+                  options: [
                     { value: 'light', label: 'Light' },
                     { value: 'dark', label: 'Dark' },
                     { value: 'auto', label: 'System' }
-                  ]}
-                />
-              </FieldRow>
+                  ]
+                }}
+              />
             </FormGroup>
             
             <Toolbar>
@@ -449,3 +456,5 @@ export function MiniLayouts() {
     </div>
   );
 }
+
+export default MiniLayouts;

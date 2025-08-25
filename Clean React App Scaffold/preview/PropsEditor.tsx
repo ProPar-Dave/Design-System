@@ -1,4 +1,5 @@
 import React from 'react';
+import { registry } from './registry';
 
 export interface PropSpec {
   name: string;
@@ -15,7 +16,9 @@ export interface PropSpec {
 
 interface PropsEditorProps {
   id: string;
-  onPropsChange: (props: Record<string, any>) => void;
+  value?: Record<string, any>;
+  onChange?: (v: Record<string, any>) => void;
+  onPropsChange?: (props: Record<string, any>) => void;
   specs?: PropSpec[];
 }
 
@@ -150,9 +153,60 @@ const componentSpecs: Record<string, PropSpec[]> = {
   ]
 };
 
-export function PropsEditor({ id, onPropsChange, specs }: PropsEditorProps) {
-  // Use provided specs or look up by component ID
-  const propSpecs = specs || componentSpecs[id] || [];
+export function PropsEditor({ id, value, onChange, onPropsChange, specs }: PropsEditorProps) {
+  const entry = registry[id];
+  const schema = entry?.schema ?? {};
+  const defaults = entry?.defaults ?? {};
+  const hasFields = !!Object.keys(schema as any).length;
+
+  if (!hasFields) {
+    return <div className="adsm-empty">No props available for this component.</div>;
+  }
+
+  // Convert registry schema to PropSpec format for compatibility
+  const propSpecs: PropSpec[] = specs || Object.entries(schema).map(([name, schemaValue]) => {
+    if (Array.isArray(schemaValue)) {
+      return {
+        name,
+        label: name.charAt(0).toUpperCase() + name.slice(1),
+        kind: 'select',
+        options: schemaValue,
+        default: defaults[name]
+      };
+    } else if (schemaValue === 'boolean') {
+      return {
+        name,
+        label: name.charAt(0).toUpperCase() + name.slice(1),
+        kind: 'boolean',
+        default: defaults[name]
+      };
+    } else if (schemaValue === 'text') {
+      return {
+        name,
+        label: name.charAt(0).toUpperCase() + name.slice(1),
+        kind: 'text',
+        default: defaults[name]
+      };
+    }
+    return {
+      name,
+      label: name.charAt(0).toUpperCase() + name.slice(1),
+      kind: 'text',
+      default: defaults[name]
+    };
+  }) || [];
+
+  // Use fallback to componentSpecs if no registry entry
+  if (propSpecs.length === 0) {
+    const fallbackSpecs = componentSpecs[id] || [];
+    if (!Array.isArray(fallbackSpecs)) {
+      console.warn('[PropsEditor] Invalid prop specs for component:', id);
+      return (
+        <div className="adsm-empty">No props available for this component.</div>
+      );
+    }
+    propSpecs.push(...fallbackSpecs);
+  }
   
   // Initialize props state with default values
   const [props, setProps] = React.useState<Record<string, any>>(() => {
@@ -167,8 +221,13 @@ export function PropsEditor({ id, onPropsChange, specs }: PropsEditorProps) {
 
   // Update parent when props change
   React.useEffect(() => {
-    onPropsChange(props);
-  }, [props, onPropsChange]);
+    if (onPropsChange) {
+      onPropsChange(props);
+    }
+    if (onChange) {
+      onChange(props);
+    }
+  }, [props, onPropsChange, onChange]);
 
   // Handle prop value changes
   const handlePropChange = React.useCallback((name: string, value: any) => {
@@ -480,3 +539,6 @@ export function useCurrentProps() {
   
   return currentProps;
 }
+
+// Export as default for lazy loading
+export default PropsEditor;

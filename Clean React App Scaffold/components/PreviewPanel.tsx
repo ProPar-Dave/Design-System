@@ -1,5 +1,31 @@
 import * as React from 'react';
 import type { DsComponent } from "../utils/catalog";
+import { getSimpleTheme } from '../src/theme/themeManager';
+
+// Simple useTheme hook - matching the one in ComponentDrawer
+function useTheme() {
+  const [theme, setTheme] = React.useState(getSimpleTheme());
+  
+  React.useEffect(() => {
+    const handleThemeChange = () => {
+      setTheme(getSimpleTheme());
+    };
+
+    document.addEventListener('adsm:theme:changed', handleThemeChange);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'adsm:theme') {
+        handleThemeChange();
+      }
+    });
+
+    return () => {
+      document.removeEventListener('adsm:theme:changed', handleThemeChange);
+      window.removeEventListener('storage', handleThemeChange);
+    };
+  }, []);
+
+  return { theme };
+}
 
 const registry: Record<string, React.ReactNode> = {
   btn: <button className="demo-btn" style={{
@@ -51,7 +77,36 @@ const registry: Record<string, React.ReactNode> = {
   }}>Secondary Button</button>,
 };
 
-export function PreviewPanel({ item }: { item: DsComponent }) {
+// Type definition for ComponentDef to match the diff
+interface ComponentDef {
+  demo?: React.ComponentType;
+  id?: string;
+}
+
+export function PreviewPanel({ component }: { component: ComponentDef }) {
+  const { theme } = useTheme();
+  if (!component) return <div className="text-muted">No preview available</div>;
+  const Demo = component.demo;
+  if (!Demo) return <div className="text-muted">No preview registered</div>;
+
+  return (
+    <div
+      className="
+        preview-panel
+        bg-[var(--color-panel)]
+        text-[var(--color-text)]
+        border border-[var(--color-border)]
+        rounded-md p-4
+      "
+      data-theme={theme ?? "light"}
+    >
+      <Demo />
+    </div>
+  );
+}
+
+// Keep the old function for backward compatibility if needed elsewhere
+export function PreviewPanelLegacy({ item }: { item: DsComponent }) {
   const node = registry[item.id];
   return (
     <div className="preview-frame">

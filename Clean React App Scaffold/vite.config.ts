@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
 
 // Plugin to generate additional build artifacts
@@ -346,6 +347,7 @@ function generateCatalogJSON() {
 export default defineConfig({
   plugins: [
     react(),
+    tsconfigPaths(),
     generateArtifactsPlugin()
   ],
   build: {
@@ -379,7 +381,8 @@ export default defineConfig({
       '@': resolve(__dirname, './'),
       '@/components': resolve(__dirname, './components'),
       '@/utils': resolve(__dirname, './utils'),
-      '@/styles': resolve(__dirname, './styles')
+      '@/styles': resolve(__dirname, './styles'),
+      '@/pages': resolve(__dirname, './src/pages')
     }
   }
 });

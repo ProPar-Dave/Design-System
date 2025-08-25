@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
-import { DsComponent, normalizeCatalog, getAllComponents, loadUserComponents } from '../utils/catalog';
+import { useMemo, useState, useEffect } from 'react';
+import { DsComponent, normalizeCatalog, loadUserComponents } from '../utils/catalog';
+import { loadCatalog, CatalogLoadResult } from '../src/catalog/loader';
 
 export interface CatalogCounts {
   total: number;
   atoms: number;
   molecules: number;
   organisms: number;
+  atom: number;    // Alias for atoms
+  molecule: number; // Alias for molecules  
+  organism: number; // Alias for organisms
   byStatus: {
     draft: number;
     ready: number;
@@ -16,15 +20,73 @@ export interface CatalogCounts {
 }
 
 export function useCatalogState() {
-  // Load all components with safe normalization
-  const catalog: DsComponent[] = useMemo(() => {
-    try {
-      return getAllComponents();
-    } catch (error) {
-      console.warn('Failed to load catalog:', error);
-      return [];
-    }
+  const [catalogResult, setCatalogResult] = useState<CatalogLoadResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load catalog on mount
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadCatalogData = async () => {
+      try {
+        setIsLoading(true);
+        const result = await loadCatalog();
+        
+        if (mounted) {
+          setCatalogResult(result);
+          console.log(`CatalogStore: Loaded ${result.count} components from ${result.loadedFrom}`);
+        }
+      } catch (error) {
+        console.error('CatalogStore: Failed to load catalog:', error);
+        if (mounted) {
+          setCatalogResult({
+            components: [],
+            loadedFrom: 'starter',
+            count: 0,
+            error: error instanceof Error ? error.message : 'Failed to load catalog'
+          });
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadCatalogData();
+
+    // Listen for catalog reload events
+    const handleCatalogReload = () => {
+      loadCatalogData();
+    };
+
+    document.addEventListener('adsm:catalog:reloaded', handleCatalogReload);
+    document.addEventListener('adsm:catalog:saved', handleCatalogReload);
+
+    return () => {
+      mounted = false;
+      document.removeEventListener('adsm:catalog:reloaded', handleCatalogReload);
+      document.removeEventListener('adsm:catalog:saved', handleCatalogReload);
+    };
   }, []);
+
+  // Get catalog components with fallback
+  const catalog: DsComponent[] = useMemo(() => {
+    if (!catalogResult) return [];
+    
+    try {
+      // Merge loaded components with user components
+      const loadedComponents = catalogResult.components || [];
+      const userComponents = loadUserComponents();
+      
+      // Combine and normalize
+      const allComponents = [...loadedComponents, ...userComponents];
+      return normalizeCatalog(allComponents);
+    } catch (error) {
+      console.warn('CatalogStore: Failed to merge catalog:', error);
+      return catalogResult.components || [];
+    }
+  }, [catalogResult]);
 
   // Compute counts with defensive patterns
   const counts: CatalogCounts = useMemo(() => {
@@ -65,6 +127,9 @@ export function useCatalogState() {
       atoms: base.atoms,
       molecules: base.molecules,
       organisms: base.organisms,
+      atom: base.atoms,      // Alias
+      molecule: base.molecules, // Alias
+      organism: base.organisms, // Alias
       byStatus: {
         draft: base.draft,
         ready: base.ready
@@ -84,7 +149,7 @@ export function useCatalogState() {
         const found = catalog.find(c => c?.id === id);
         return found || null;
       } catch (error) {
-        console.warn('Failed to find component by ID:', id, error);
+        console.warn('CatalogStore: Failed to find component by ID:', id, error);
         return null;
       }
     };
@@ -96,7 +161,7 @@ export function useCatalogState() {
       try {
         return catalog.filter(c => c && predicate(c));
       } catch (error) {
-        console.warn('Failed to filter components:', error);
+        console.warn('CatalogStore: Failed to filter components:', error);
         return [];
       }
     };
@@ -123,7 +188,7 @@ export function useCatalogState() {
                  tags.some(tag => tag.includes(lowerQuery));
         });
       } catch (error) {
-        console.warn('Failed to search components:', error);
+        console.warn('CatalogStore: Failed to search components:', error);
         return [];
       }
     };
@@ -134,7 +199,9 @@ export function useCatalogState() {
     counts, 
     byId, 
     filter, 
-    search 
+    search,
+    isLoading,
+    loadResult: catalogResult
   };
 }
 
@@ -144,7 +211,7 @@ export function useUserComponents() {
     try {
       return loadUserComponents();
     } catch (error) {
-      console.warn('Failed to load user components:', error);
+      console.warn('CatalogStore: Failed to load user components:', error);
       return [];
     }
   }, []);
@@ -154,7 +221,7 @@ export function useUserComponents() {
 
 // Helper hook for component statistics
 export function useComponentStats() {
-  const { counts } = useCatalogState();
+  const { counts, isLoading } = useCatalogState();
   
   const percentages = useMemo(() => {
     const { total, atoms, molecules, organisms } = counts;
@@ -173,6 +240,31 @@ export function useComponentStats() {
   return {
     counts,
     percentages,
-    isEmpty: counts.total === 0
+    isEmpty: counts.total === 0,
+    isLoading
   };
+}
+
+// Hook for catalog diagnostics
+export function useCatalogDiagnostics() {
+  const { loadResult } = useCatalogState();
+  
+  return useMemo(() => {
+    if (!loadResult) {
+      return {
+        loadedFrom: 'unknown' as const,
+        count: 0,
+        hasError: false,
+        url: undefined
+      };
+    }
+    
+    return {
+      loadedFrom: loadResult.loadedFrom,
+      count: loadResult.count,
+      hasError: !!loadResult.error,
+      error: loadResult.error,
+      url: loadResult.url
+    };
+  }, [loadResult]);
 }
